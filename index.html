@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>comic sans</title>
+        <title>string theory, the guitar kind</title>
         <meta charset='utf-8' />
         <!-- libs -->
         <script type='text/javascript' src='jquery.min.js'></script>
@@ -12,13 +12,36 @@
         <script type='text/javascript' src='sound.js'></script>
 
         <style>
-            html, body { margin: 0; padding: 0; background: white; }
-            .container { width: 600px; margin: 0 auto; padding: 50px; text-align: center; }
-            #draw { width: 600px; height: 400px; border: 3px solid transparent; background: #fff; }
+            html, body { margin: 0; padding: 0; background: black; height:  100%; }
+            .container { height: 100%; margin: 0 auto; 
+    display: flex;           /* establish flex container */
+    flex-direction: column;  /* make main axis vertical */
+    justify-content: center; /* center items vertically, in this case */
+    align-items: center;     /* center items horizontally, in this case */}
+            #draw { width: 600px; height: 400px; border: 3px solid transparent; }
             #save { margin: 10px; font-size: 20px; line-height: 25px; }
         </style>
         <script type='text/javascript'>
-
+            jQuery.event.special.touchstart = {
+                setup: function( _, ns, handle ) {
+                    this.addEventListener("touchstart", handle, { passive: false });
+                }
+            };
+            jQuery.event.special.touchmove = {
+                setup: function( _, ns, handle ) {
+                    this.addEventListener("touchmove", handle, { passive: false });
+                }
+            };
+            jQuery.event.special.wheel = {
+                setup: function( _, ns, handle ){
+                    this.addEventListener("wheel", handle, { passive: false });
+                }
+            };
+            jQuery.event.special.mousewheel = {
+                setup: function( _, ns, handle ){
+                    this.addEventListener("mousewheel", handle, { passive: false });
+                }
+            };
             $(document).ready(function() {
 
                 // create a drawing area inside an element
@@ -36,9 +59,16 @@
                 var context = canvas.getContext("2d");
 
                 function init() {
-                    context.fillStyle = "rgba(255,255,255, 0.3)";
+                    context.fillStyle = "rgba(0, 0, 0, 0.3)";
                     context.lineWidth = 2;
-                    context.strokeStyle = "#000";
+                    context.strokeStyle = "#fff";
+
+
+                    context.beginPath();
+                    context.moveTo(0, string_y);
+                    context.lineTo(canvas_jq.width(), string_y);
+                    context.stroke();
+
                 }
                 init()
                 let soundwave;
@@ -57,57 +87,85 @@
                     }
                 }
 
+
+
+                function play({offsetX, offsetY}) {
+
+                    let points = [];
+                    let count = 100;
+                    let pluck_index = (offsetX/canvas_jq.width()) * count;
+                    for(var i=0; i<count; i++) {
+                        if(i<=pluck_index) {
+                            start_y = 0;
+                            end_y = offsetY - string_y
+                            points[i] = end_y*(i/pluck_index) / string_y;
+                        } else {
+                            start_y = offsetY - string_y;
+                            end_y = 0;
+                            points[i] = start_y*((count-i)/(count-pluck_index)) / string_y;
+                        }
+
+                    }
+
+                    let freqs = stringFFT(points);
+                    for(var wi=0; wi<waves.length; wi++) {
+                        waves[wi].wave.amplitude = (freqs[waves[wi].wave.freq]) / 5
+                    }
+                    init()
+                    start = Date.now();
+                    playing = true;
+                    frame()
+                    
+                    var AudioContext = window.webkitAudioContext || window.AudioContext || false; 
+
+                    if(AudioContext) {
+                        var audio_context = new AudioContext();
+                        soundwave = new soundWave(audio_context, waves.map(wc => wc.wave));
+                    }
+
+                    if(soundwave) {
+                        soundwave.play();
+                    }
+                }
+
+                function click_or_touch_coordinates(e) {
+                    if(e.type == 'touchstart' || e.type == 'touchmove' || e.type == 'touchend' || e.type == 'touchcancel'){
+                        var touch = e.originalEvent.touches[0] || e.originalEvent.changedTouches[0];
+                        x = touch.pageX;
+                        y = touch.pageY;
+                    } else if (e.type == 'mousedown' || e.type == 'mouseup' || e.type == 'mousemove' || e.type == 'mouseover'|| e.type=='mouseout' || e.type=='mouseenter' || e.type=='mouseleave') {
+                        x = e.clientX;
+                        y = e.clientY;
+                    }
+
+                    let offsetX = Math.min(Math.max(x - canvas_jq.offset().left, 10), canvas_jq.width()-10)
+                    let offsetY = Math.min(Math.max(y - canvas_jq.offset().top, 1), canvas_jq.height())
+                    return {offsetX, offsetY};
+                }
+
+
                 let plucking = false;
-                canvas_jq.on('mousedown', (e) => {
+                $(document).on('mousedown touchstart', (e) => {
+                    e.preventDefault();
                     plucking = true;
                     playing = false;
                     if(soundwave) soundwave.pause();
                 })
-                canvas_jq.on('mouseup', (e) => {
+
+                $(document).on('mouseup touchend', (e) => {
+                    e.preventDefault();
+                    let {offsetX, offsetY} = click_or_touch_coordinates(e);
                     if(plucking) {
-                        let {offsetX, offsetY} = e;
-                        let points = [];
-                        let count = 100;
-                        let pluck_index = (offsetX/canvas_jq.width()) * count;
-                        for(var i=0; i<count; i++) {
-                            if(i<=pluck_index) {
-                                start_y = 0;
-                                end_y = offsetY - string_y
-                                points[i] = end_y*(i/pluck_index) / string_y;
-                            } else {
-                                start_y = offsetY - string_y;
-                                end_y = 0;
-                                points[i] = start_y*((count-i)/(count-pluck_index)) / string_y;
-                            }
-
-                        }
-
-                        let freqs = stringFFT(points);
-                        for(var wi=0; wi<waves.length; wi++) {
-                            waves[wi].wave.amplitude = (freqs[waves[wi].wave.freq]) / 5
-                        }
-                        init()
-                        start = Date.now();
-                        playing = true;
-                        frame()
-                        
-
-                        var AudioContext = window.AudioContext || window.webkitAudioContext || false; 
-
-                        if(AudioContext) {
-                            var audio_context = new AudioContext();
-                            soundwave = new soundWave(audio_context, waves.map(wc => wc.wave));
-                            soundwave.play();
-                        }
-
+                        play({offsetX, offsetY})
                     }
                     plucking = false;
                 })
-                canvas_jq.on('mousemove', (e) => {
+                $(document).on('mousemove touchmove', (e) => {
+                    e.preventDefault();
+                    let {offsetX, offsetY} = click_or_touch_coordinates(e);
                     if(plucking) {
-                        context.fillStyle = "rgba(255,255,255, 1)";
+                        context.fillStyle = "rgba(0,0,0, 1)";
                         context.fillRect(0, 0, context.width, context.height);
-                        let {offsetX, offsetY} = e;
 
                         context.beginPath();
                         context.moveTo(0, string_y);
