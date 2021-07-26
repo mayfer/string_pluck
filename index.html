@@ -145,6 +145,11 @@
 
 
                 let plucking = false;
+                $(window).blur(function(){
+                    plucking = true;
+                    playing = false;
+                    if(soundwave) soundwave.pause();
+                });
                 $(document).on('mousedown touchstart', (e) => {
                     e.preventDefault();
                     plucking = true;
