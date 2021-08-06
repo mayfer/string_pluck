@@ -15,6 +15,9 @@ soundWave = function(context, standing_waves) {
 
     this.standing_waves = standing_waves;
 
+    // dont blow up ears
+    this.gain = Math.min(1, 1 / Math.max(...standing_waves.map(w => Math.abs(w.amplitude))));
+
     if(context.createJavaScriptNode) {
         this.node = context.createJavaScriptNode(1024, 1, 2);
     } else {
@@ -51,7 +54,7 @@ soundWave.prototype.process = function(e) {
             var current_freq = Notes.relative_note(wave.freq, pitch_bend);
 
             // square env. amplitude to convert it to a logarithmic scale which better suits our perception
-            current_amplitude = envelope_amplitude * envelope_amplitude * wave.gain;
+            current_amplitude = envelope_amplitude * envelope_amplitude * wave.gain * this.gain;
 
             // accumulate wave vals for all tones
             if(this.xs[j] == undefined) {

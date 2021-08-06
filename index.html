@@ -50,7 +50,8 @@
                 let duration = 4000;
                 let string_y = 150;
                 
-                var waves = [110, 220, 330, 440, 550, 660, 770, 880].map(freq => new stringSubCanvas(canvas_jq, new standingWave({freq, duration}), 110, 100, 0));
+                var overtone_freqs = [110, 220, 330, 440, 550, 660, 770, 880, 990, 1100];
+                var waves = overtone_freqs.map(freq => new stringSubCanvas(canvas_jq, new standingWave({freq, duration}), 110, 100, 0));
 
                 var drawWave = new superposedStringCanvas(canvas_jq, waves, string_y*2)
                 //drawWave.init()
@@ -59,6 +60,9 @@
                 var context = canvas.getContext("2d");
 
                 function init() {
+                    context.fillStyle = "rgba(0, 0, 0, 1)";
+                    context.fillRect(0, 0, context.width, context.height);
+
                     context.fillStyle = "rgba(0, 0, 0, 0.3)";
                     context.lineWidth = 2;
                     context.strokeStyle = "#fff";
@@ -84,6 +88,7 @@
                     } else {
                         playing = false;
                         if(soundwave) soundwave.pause();
+                        init();
                     }
                 }
 
@@ -146,9 +151,10 @@
 
                 let plucking = false;
                 $(window).blur(function(){
-                    plucking = true;
+                    plucking = false;
                     playing = false;
                     if(soundwave) soundwave.pause();
+                    init()
                 });
                 $(document).on('mousedown touchstart', (e) => {
                     e.preventDefault();
@@ -200,7 +206,7 @@
 
                 function stringFFT(points) {
                     let freqs = {};
-                    for(var freq=110; freq<=880; freq+= 110) {
+                    for(var freq=110; freq<=overtone_freqs[overtone_freqs.length-1]; freq+= 110) {
                         let resonance = 0;
                         for(var i=0; i<points.length; i++) {
                             var angle = 2 * Math.PI * (freq/220) * i / points.length;
