@@ -31,10 +31,10 @@ function stringSubCanvas(waves_canvas, wave, base_freq, wave_height, spacer) {
             return this.current_plot_coordinates;
         }
         
-        this.step = this.speed * time_diff * (Math.PI/20) * this.speed_adjustment % Math.PI*2;
+        this.step = Math.PI / 4 + this.speed * time_diff * (Math.PI/20) * this.speed_adjustment % Math.PI*2;
         var volume_envelope_amplitude = this.wave.autoEnvelopeValue(time_diff / this.wave.duration);
         
-        var current_amplitude = Math.sin(this.step + this.wave.phase) * volume_envelope_amplitude * this.wave_halfheight;
+        var current_amplitude = 3 * Math.sin(this.step + this.wave.phase) * volume_envelope_amplitude * this.wave_halfheight;
         var x = 0;
         var y = 0;
         var points = [];
@@ -101,6 +101,21 @@ function superposedStringCanvas(waves_canvas, strings, wave_height) {
     this.center = this.wave_halfheight;
     this.num_steps = Math.floor(this.context.width / X_INCREMENT);
     
+
+    this.getPluckY = function(time_diff, pluck_coordinates, sample_size, index) {
+        let offsetX = pluck_coordinates.x, offsetY = pluck_coordinates.y;
+        let pluck_index = Math.floor(pluck_coordinates.x * sample_size);
+
+        if(index<=pluck_index) {
+            start_y = 0;
+            end_y = offsetY
+            return start_y + end_y*(index/pluck_index);
+        } else {
+            start_y = offsetY;
+            end_y = 0;
+            return start_y*((sample_size-index)/(sample_size-pluck_index));
+        }
+    }
     this.draw = function(time_diff) {
         this.context.fillRect(0, 0, this.context.width, this.context.height);
         this.context.beginPath();
@@ -114,7 +129,13 @@ function superposedStringCanvas(waves_canvas, strings, wave_height) {
                 coords.y += current_coords[i].y;
             }
 
+
             coords.y = coords.y / this.strings.length;
+            if(this.pluck_coordinates) {
+                let pluckY = this.getPluckY(time_diff, this.pluck_coordinates, this.num_steps, i);
+                let fade = Math.pow(Math.max(0, (50-time_diff)/50), 3)
+                coords.y = (1-fade)*coords.y + fade * pluckY * this.wave_halfheight;
+            }
             coords.y = Math.min(coords.y, this.wave_halfheight);
             coords.y = Math.max(coords.y, -this.wave_halfheight);
             this.context.lineTo(coords.x, coords.y + this.center);

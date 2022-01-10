@@ -50,7 +50,7 @@
                 let duration = 4000;
                 let string_y = 150;
                 
-                var overtone_freqs = [110, 220, 330, 440, 550, 660, 770, 880, 990, 1100];
+                var overtone_freqs = [110, 220, 330, 440, 550, 660, 770, 880, 990, 1100, 1210, 1320, 1430, 1540];
                 var waves = overtone_freqs.map(freq => new stringSubCanvas(canvas_jq, new standingWave({freq, duration}), 110, 100, 0));
 
                 var drawWave = new superposedStringCanvas(canvas_jq, waves, string_y*2)
@@ -148,6 +148,40 @@
                     return {offsetX, offsetY};
                 }
 
+                let draw_pluck = function(offsetX, offsetY) {
+                    context.fillStyle = "rgba(0,0,0, 1)";
+                    context.fillRect(0, 0, context.width, context.height);
+
+                    context.beginPath();
+                    context.moveTo(0, string_y);
+                    context.lineTo(offsetX, offsetY);
+                    context.lineTo(canvas_jq.width(), string_y);
+                    context.stroke();
+
+                    drawWave.pluck_coordinates = {
+                        x: offsetX / canvas_jq.width(),
+                        y: (offsetY - string_y) / (canvas_jq.height() / 2)
+                    }
+
+                    let points = [];
+                    let count = 500;
+                    let pluck_index = (offsetX/canvas_jq.width()) * count;
+                    for(var i=0; i<count; i++) {
+                        if(i<=pluck_index) {
+                            start_y = 0;
+                            end_y = offsetY - string_y
+                            points[i] = start_y + end_y*(i/pluck_index);
+                        } else {
+                            start_y = offsetY - string_y;
+                            end_y = 0;
+                            points[i] = start_y*((count-i)/(count-pluck_index));
+                        }
+
+                        //context.fillStyle = "rgba(0, 0, 0, 1)";
+                        //context.fillRect((i/count)*canvas_jq.width(), points[i]+string_y, 5, 5);
+                    }
+                }
+
 
                 let plucking = false;
                 $(window).blur(function(){
@@ -161,6 +195,8 @@
                     plucking = true;
                     playing = false;
                     if(soundwave) soundwave.pause();
+                    let {offsetX, offsetY} = click_or_touch_coordinates(e);
+                    draw_pluck(offsetX, offsetY);
                 })
 
                 $(document).on('mouseup touchend', (e) => {
@@ -175,32 +211,7 @@
                     e.preventDefault();
                     let {offsetX, offsetY} = click_or_touch_coordinates(e);
                     if(plucking) {
-                        context.fillStyle = "rgba(0,0,0, 1)";
-                        context.fillRect(0, 0, context.width, context.height);
-
-                        context.beginPath();
-                        context.moveTo(0, string_y);
-                        context.lineTo(offsetX, offsetY);
-                        context.lineTo(canvas_jq.width(), string_y);
-                        context.stroke();
-
-                        let points = [];
-                        let count = 100;
-                        let pluck_index = (offsetX/canvas_jq.width()) * count;
-                        for(var i=0; i<count; i++) {
-                            if(i<=pluck_index) {
-                                start_y = 0;
-                                end_y = offsetY - string_y
-                                points[i] = start_y + end_y*(i/pluck_index);
-                            } else {
-                                start_y = offsetY - string_y;
-                                end_y = 0;
-                                points[i] = start_y*((count-i)/(count-pluck_index));
-                            }
-
-                            //context.fillStyle = "rgba(0, 0, 0, 1)";
-                            //context.fillRect((i/count)*canvas_jq.width(), points[i]+string_y, 5, 5);
-                        }
+                        draw_pluck(offsetX, offsetY);
                     }
                 })
 
@@ -210,7 +221,20 @@
                         let resonance = 0;
                         for(var i=0; i<points.length; i++) {
                             var angle = 2 * Math.PI * (freq/220) * i / points.length;
-                            resonance += points[i] * Math.sin(angle)
+                            resonance += points[i] * -Math.sin(angle)
+                        }
+                        freqs[freq] = resonance;
+                    }
+                    return freqs;
+                }
+
+                function stringFFT2(points) {
+                    let freqs = {};
+                    for(var freq=110; freq<=overtone_freqs[overtone_freqs.length-1]; freq+= 110) {
+                        let resonance = 0;
+                        for(var i=0; i<points.length; i++) {
+                            var angle = 2 * Math.PI * (freq/220) * i / points.length;
+                            resonance += points[i] * -Math.sin(angle)
                         }
                         freqs[freq] = resonance;
                     }

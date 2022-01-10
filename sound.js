@@ -12,6 +12,7 @@ soundWave = function(context, standing_waves) {
     this.sampleRateMillisecond = this.sampleRate / 1000;
     this.playing = false;
     this.fadeout_counter = 0;
+    this.phase = Math.PI/4;
 
     this.standing_waves = standing_waves;
 
@@ -23,6 +24,8 @@ soundWave = function(context, standing_waves) {
     } else {
         this.node = context.createScriptProcessor(1024, 1, 2);
     }
+    this.gain_node = context.createGain();
+    this.gain_node.connect(context.destination);
     var that = this;
     this.node.onaudioprocess = function(e) { that.process(e) };
 }
@@ -42,6 +45,8 @@ soundWave.prototype.process = function(e) {
     var cumulative_amplitude = 0;
 
     var x_increment = Math.PI * 2 / this.sampleRate;
+
+    this.fadeout_counter = 0;
 
     for (var i = 0; i < buffer_size; i++) {
         cumulative_amplitude = 0;
@@ -68,16 +73,12 @@ soundWave.prototype.process = function(e) {
             cumulative_amplitude += (current_amplitude * y) / this.standing_waves.length;
             
         }
-        if(!this.playing) {
-            // fadeout to prevent popping during a pause/stop
-            var fadeout_length = 10000;
-            cumulative_amplitude -= cumulative_amplitude * (this.fadeout_counter++/fadeout_length)
-            if(this.fadeout_counter >= fadeout_length) {
-                this.counter = 0;
-                this.fadeout_counter = 0;
+        if(!this.playing && !this.stopped) {
+            this.stopped = true;
+            this.gain_node.gain.linearRampToValueAtTime(0, this.context.currentTime + 0.01);
+            setTimeout(() => {
                 this.node.disconnect();
-                break;
-            }
+            }, 15);
         }
         for(var k = 0; k < num_channels; k++) {
             channels[k][i] = cumulative_amplitude;
@@ -87,10 +88,12 @@ soundWave.prototype.process = function(e) {
 }
 
 soundWave.prototype.play = function() {
-    this.node.connect(this.context.destination);
+    this.node.connect(this.gain_node);
     this.playing = true;
+    this.stopped = false;
 }
 
 soundWave.prototype.pause = function() {
     this.playing = false;
+    this.fadeout_counter = 0;
 }
