@@ -50,7 +50,7 @@
                 let duration = 4000;
                 let string_y = 150;
                 
-                var overtone_freqs = [110, 220, 330, 440, 550, 660, 770, 880, 990, 1100, 1210, 1320, 1430, 1540];
+                var overtone_freqs = [110, 220, 330, 440, 550, 660, 770, 880, 990, 1100, 1210, 1320, 1430, 1540, ];
                 var waves = overtone_freqs.map(freq => new stringSubCanvas(canvas_jq, new standingWave({freq, duration}), 110, 100, 0));
 
                 var drawWave = new superposedStringCanvas(canvas_jq, waves, string_y*2)

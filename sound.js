@@ -78,6 +78,7 @@ soundWave.prototype.process = function(e) {
             this.gain_node.gain.linearRampToValueAtTime(0, this.context.currentTime + 0.01);
             setTimeout(() => {
                 this.node.disconnect();
+                this.gain_node.disconnect();
             }, 15);
         }
         for(var k = 0; k < num_channels; k++) {
