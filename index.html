@@ -8,10 +8,7 @@
         <script type='text/javascript' src='unmute.js'></script>
         <script type='text/javascript' src='draw.js'></script>
         <script type='text/javascript' src='notes.js'></script>
-        <script type='text/javascript' src='waves.js'></script>
         <script type='text/javascript' src='plucker.js'></script>
-        <script type='text/javascript' src='sound.js'></script>
-
         <style>
             html, body { margin: 0; padding: 0; background: black; height:  100%; }
             .container { height: 100%; margin: 0 auto; 
@@ -52,72 +49,65 @@
                 let string_y = 150;
                 
                 var overtone_freqs = [110, 220, 330, 440, 550, 660, 770, 880, 990, 1100, 1210, 1320, 1430, 1540, ];
-                var waves = overtone_freqs.map(freq => new stringSubCanvas(canvas_jq, new standingWave({freq, duration}), 110, 100, 0));
+                var overtones = overtone_freqs.map(freq => { return {freq, amplitude: 1} });
 
-                var drawWave = new superposedStringCanvas(canvas_jq, waves, string_y*2)
-                //drawWave.init()
+
+                let initial_strings = [
+                    {
+                        string_center: {x: 400, y: 300},
+                        string_width: 400,
+                    },
+                    {
+                        string_center: {x: 100, y: 200},
+                        string_width: 100,
+                    },
+                    {
+                        string_center: {x: 700, y: 700},
+                        string_width: 200,
+                    },
+                ]
+
+                let strings = [];
+
+                for(let string of initial_strings) {
+                    var drawWave = new pluckableString({
+                        canvas: canvas_jq.get(0),
+                        overtones,
+                        wave_height: 50,
+                        string_width: string.string_width,
+                        string_center: string.string_center,
+                        angle: 0,
+                        duration
+                    })
+                    strings.push(drawWave);
+                }
 
                 var canvas = canvas_jq.get(0);
                 var context = canvas.getContext("2d");
 
                 function init() {
-                    context.fillStyle = "rgba(0, 0, 0, 1)";
-                    context.fillRect(0, 0, context.width, context.height);
-
-                    context.fillStyle = "rgba(0, 0, 0, 0.3)";
-                    context.lineWidth = 2;
-                    context.strokeStyle = "#fff";
-
-
-                    // context.beginPath();
-                    // context.moveTo(0, string_y);
-                    // context.lineTo(canvas_jq.width(), string_y);
-                    // context.stroke();
-
+                    strings.forEach(s => s.draw_still());
                 }
                 init()
-                let soundwave;
 
-                let start;
-                let playing = false;
                 let frame = () => {
                     context.fillRect(0, 0, context.width, context.height);
-                    let time_diff = Date.now()-start;
-                    drawWave.draw(time_diff, 0)
-                    if(playing && time_diff <= duration) {
-                        requestAnimationFrame(frame)
-                    } else {
-                        playing = false;
-                        if(soundwave) soundwave.pause();
-                        init();
-                    }
+                    //let time_diff = Date.now()-start;
+                    strings.forEach(s => {
+                        if(s.playing) s.draw()
+                        else if(s.plucking) s.draw_pluck();
+                        else s.draw_still();
+                    });
+                    requestAnimationFrame(frame)
                 }
 
+                frame()
 
 
-                function play({offsetX, offsetY}) {
+                function play(string, {offsetX, offsetY}) {
 
-                    let freqs = drawWave.executePluck(offsetX, offsetY)
-                    //let freqs = stringFFT(points);
-                    for(var wi=0; wi<waves.length; wi++) {
-                        waves[wi].wave.amplitude = (freqs[waves[wi].wave.freq]) / 5
-                    }
-
-                    init()
-                    start = Date.now();
-                    playing = true;
-                    frame()
+                    string.executePluck(offsetX, offsetY)
                     
-                    var AudioContext = window.webkitAudioContext || window.AudioContext || false; 
-
-                    if(AudioContext) {
-                        var audio_context = new AudioContext();
-                        soundwave = new soundWave(audio_context, waves.map(wc => wc.wave));
-                    }
-
-                    if(soundwave) {
-                        soundwave.play();
-                    }
                 }
 
                 function click_or_touch_coordinates(e) {
@@ -135,71 +125,38 @@
                     return {offsetX, offsetY};
                 }
 
-                let draw_pluck = function(offsetX, offsetY) {
-                    context.fillStyle = "rgba(0,0,0, 1)";
-                    context.fillRect(0, 0, context.width, context.height);
 
-                    context.beginPath();
-                    context.moveTo(0, string_y);
-                    context.lineTo(offsetX, offsetY);
-                    context.lineTo(canvas_jq.width(), string_y);
-                    context.stroke();
-
-                    drawWave.pluck_coordinates = {
-                        x: offsetX ,
-                        y: offsetY
-                    }
-
-                    let points = [];
-                    let count = 500;
-                    let pluck_index = (offsetX/canvas_jq.width()) * count;
-                    for(var i=0; i<count; i++) {
-                        if(i<=pluck_index) {
-                            start_y = 0;
-                            end_y = offsetY - string_y
-                            points[i] = start_y + end_y*(i/pluck_index);
-                        } else {
-                            start_y = offsetY - string_y;
-                            end_y = 0;
-                            points[i] = start_y*((count-i)/(count-pluck_index));
-                        }
-
-                        //context.fillStyle = "rgba(0, 0, 0, 1)";
-                        //context.fillRect((i/count)*canvas_jq.width(), points[i]+string_y, 5, 5);
-                    }
-                }
-
-
-                let plucking = false;
                 $(window).blur(function(){
-                    plucking = false;
-                    playing = false;
-                    if(soundwave) soundwave.pause();
+                    strings.forEach(s => s.stop_sound());
                     init()
                 });
                 $(document).on('mousedown touchstart', (e) => {
                     e.preventDefault();
-                    plucking = true;
-                    playing = false;
-                    if(soundwave) soundwave.pause();
                     let {offsetX, offsetY} = click_or_touch_coordinates(e);
-                    drawWave.draw_pluck(offsetX, offsetY);
+                    strings[0].set_pluck_offsets(offsetX, offsetY);
+                    strings[0].playing = false;
+                    strings.forEach(s => s.stop_sound());
                 })
 
                 $(document).on('mouseup touchend', (e) => {
                     e.preventDefault();
                     let {offsetX, offsetY} = click_or_touch_coordinates(e);
-                    if(plucking) {
-                        play({offsetX, offsetY})
-                    }
-                    plucking = false;
+
+                    strings.map(s => {
+                        if(s.plucking) {
+                            play(strings[0], {offsetX, offsetY})
+                            s.plucking = false;
+                        }
+                    });
                 })
                 $(document).on('mousemove touchmove', (e) => {
                     e.preventDefault();
                     let {offsetX, offsetY} = click_or_touch_coordinates(e);
-                    if(plucking) {
-                        drawWave.draw_pluck(offsetX, offsetY);
-                    }
+                    strings.map(s => {
+                        if(s.plucking) {
+                            s.set_pluck_offsets(offsetX, offsetY)
+                        }
+                    });
                 })
 
                 
