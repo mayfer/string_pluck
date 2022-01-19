@@ -5,10 +5,11 @@
         <meta charset='utf-8' />
         <!-- libs -->
         <script type='text/javascript' src='jquery.min.js'></script>
+        <script type='text/javascript' src='unmute.js'></script>
         <script type='text/javascript' src='draw.js'></script>
         <script type='text/javascript' src='notes.js'></script>
         <script type='text/javascript' src='waves.js'></script>
-        <script type='text/javascript' src='drawwave.js'></script>
+        <script type='text/javascript' src='plucker.js'></script>
         <script type='text/javascript' src='sound.js'></script>
 
         <style>
@@ -18,7 +19,7 @@
     flex-direction: column;  /* make main axis vertical */
     justify-content: center; /* center items vertically, in this case */
     align-items: center;     /* center items horizontally, in this case */}
-            #draw { width: 600px; height: 400px; border: 3px solid transparent; }
+            #draw { width: 100%; height: 100%; border: 3px solid transparent; }
             #save { margin: 10px; font-size: 20px; line-height: 25px; }
         </style>
         <script type='text/javascript'>
@@ -68,10 +69,10 @@
                     context.strokeStyle = "#fff";
 
 
-                    context.beginPath();
-                    context.moveTo(0, string_y);
-                    context.lineTo(canvas_jq.width(), string_y);
-                    context.stroke();
+                    // context.beginPath();
+                    // context.moveTo(0, string_y);
+                    // context.lineTo(canvas_jq.width(), string_y);
+                    // context.stroke();
 
                 }
                 init()
@@ -96,26 +97,12 @@
 
                 function play({offsetX, offsetY}) {
 
-                    let points = [];
-                    let count = 100;
-                    let pluck_index = (offsetX/canvas_jq.width()) * count;
-                    for(var i=0; i<count; i++) {
-                        if(i<=pluck_index) {
-                            start_y = 0;
-                            end_y = offsetY - string_y
-                            points[i] = end_y*(i/pluck_index) / string_y;
-                        } else {
-                            start_y = offsetY - string_y;
-                            end_y = 0;
-                            points[i] = start_y*((count-i)/(count-pluck_index)) / string_y;
-                        }
-
-                    }
-
-                    let freqs = stringFFT(points);
+                    let freqs = drawWave.executePluck(offsetX, offsetY)
+                    //let freqs = stringFFT(points);
                     for(var wi=0; wi<waves.length; wi++) {
                         waves[wi].wave.amplitude = (freqs[waves[wi].wave.freq]) / 5
                     }
+
                     init()
                     start = Date.now();
                     playing = true;
@@ -159,8 +146,8 @@
                     context.stroke();
 
                     drawWave.pluck_coordinates = {
-                        x: offsetX / canvas_jq.width(),
-                        y: (offsetY - string_y) / (canvas_jq.height() / 2)
+                        x: offsetX ,
+                        y: offsetY
                     }
 
                     let points = [];
@@ -196,7 +183,7 @@
                     playing = false;
                     if(soundwave) soundwave.pause();
                     let {offsetX, offsetY} = click_or_touch_coordinates(e);
-                    draw_pluck(offsetX, offsetY);
+                    drawWave.draw_pluck(offsetX, offsetY);
                 })
 
                 $(document).on('mouseup touchend', (e) => {
@@ -211,35 +198,9 @@
                     e.preventDefault();
                     let {offsetX, offsetY} = click_or_touch_coordinates(e);
                     if(plucking) {
-                        draw_pluck(offsetX, offsetY);
+                        drawWave.draw_pluck(offsetX, offsetY);
                     }
                 })
-
-                function stringFFT(points) {
-                    let freqs = {};
-                    for(var freq=110; freq<=overtone_freqs[overtone_freqs.length-1]; freq+= 110) {
-                        let resonance = 0;
-                        for(var i=0; i<points.length; i++) {
-                            var angle = 2 * Math.PI * (freq/220) * i / points.length;
-                            resonance += points[i] * -Math.sin(angle)
-                        }
-                        freqs[freq] = resonance;
-                    }
-                    return freqs;
-                }
-
-                function stringFFT2(points) {
-                    let freqs = {};
-                    for(var freq=110; freq<=overtone_freqs[overtone_freqs.length-1]; freq+= 110) {
-                        let resonance = 0;
-                        for(var i=0; i<points.length; i++) {
-                            var angle = 2 * Math.PI * (freq/220) * i / points.length;
-                            resonance += points[i] * -Math.sin(angle)
-                        }
-                        freqs[freq] = resonance;
-                    }
-                    return freqs;
-                }
 
                 
             });

@@ -1,90 +1,15 @@
-X_INCREMENT = 1;
 
-
-
-function stringSubCanvas(waves_canvas, wave, base_freq, wave_height, spacer) {
+function pluckableString(waves_canvas, overtones, wave_height, string_width, string_center, angle) {
     this.waves_canvas = waves_canvas;
-    this.wave = wave;
-    this.context = this.waves_canvas.get(0).getContext("2d");
-    this.standing = Math.PI / this.context.width; // resonant wavelength for canvas width
-    
-    this.wave_height = wave_height;
-    this.wave_halfheight = this.wave_height / 2;
-    this.spacer = spacer;
-
-    this.speed = 2; // whatevs
-    
-    this.current_plot_coordinates = null;
-    
-    this.init = function() {
-        this.context.fillStyle = "rgba(255,255,255, 0.3)";
-        this.context.lineWidth = 2;
-        this.context.strokeStyle = "#000";
-    };
-
-    this.set_standing_freq = function(string_width) {
-        this.string_width = string_width;
-        this.standing = Math.PI / string_width;
-    };
-
-    this.getPlotCoordinates = function(time_diff) {
-        this.relative_freq = this.standing * this.wave.freq / base_freq;
-        this.speed_adjustment = this.wave.freq / base_freq / 50;
-        
-        if(this.last_plot === time_diff) {
-            // no need to recalculate
-            return this.current_plot_coordinates;
-        }
-        
-        this.step = Math.PI / 4 + this.speed * time_diff * (Math.PI/20) * this.speed_adjustment % Math.PI*2;
-        var volume_envelope_amplitude = this.wave.autoEnvelopeValue(time_diff / this.wave.duration);
-        
-        var current_amplitude = 3 * Math.sin(this.step + this.wave.phase) * volume_envelope_amplitude * this.wave_halfheight;
-        var x = 0;
-        var y = 0;
-        var points = [];
-        while(x <= this.string_width) {
-            x += X_INCREMENT;
-            y = this.wave.sin(x, this.relative_freq, current_amplitude);
-            var point = {
-                x: x,
-                y: y,
-            };
-            points.push(point);
-        }
-        this.last_plot = time_diff;
-        this.current_plot_coordinates = points;
-        return points;
-    };
-
-    this.draw = function(time_diff, index) {
-        var center = index * (this.wave_height + this.spacer) + this.wave_halfheight;
-        var plot_coordinates = this.getPlotCoordinates(time_diff);
-        this.context.beginPath();
-        this.context.moveTo(0, center);
-        for(var i = 1; i < plot_coordinates.length; i++) {
-            coord = plot_coordinates[i];
-            this.context.lineTo(coord.x, coord.y + center);
-        }
-        this.context.stroke();
-    };
-
-    this.clear = function() {
-        this.context.clearRect(0, 0, this.context.width, this.context.height);
-    }
-}
-
-function superposedStringCanvas(waves_canvas, strings, wave_height) {
-    this.waves_canvas = waves_canvas;
-    this.strings = strings;
+    this.overtones = overtones;
     this.context = this.waves_canvas.get(0).getContext("2d");
     this.wave_height = wave_height;
     this.wave_halfheight = this.wave_height / 2;
     this.center = this.wave_halfheight;
     
-    this.string_width = 300;
-    this.string_position = {x: 300, y: 200};
-    this.string_height = 150;
+    this.string_width = string_width;
+    this.string_position = {x: string_center.x - string_width/2, y: string_center.y};
+    this.string_height = wave_height;
     this.num_steps = Math.floor(this.string_width / X_INCREMENT);
 
     this.strings.forEach(function(string) {
