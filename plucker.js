@@ -10,6 +10,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
 
     this.duration = duration;
     
+    this.string_center = string_center;
     this.string_width = string_width;
     this.string_position = {x: string_center.x - string_width/2, y: string_center.y};
     this.string_height = wave_height;
@@ -20,6 +21,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     this.playing = false;
 
     this.counter = 0;
+    this.counter_b = 0;
 
     this.fourier = function(points) {
         let freqs = {};
@@ -108,11 +110,11 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
 
 
             coords.y = coords.y / this.overtones.length;
-            if(false && this.pluck_coordinates) {
-                let pluckY = this.getPluckY(this.time_diff, this.pluck_coordinates, this.num_steps, i);
-                let fade = Math.pow(Math.max(0, (50-this.time_diff)/50), 3)
-                coords.y = (1-fade)*coords.y + fade * pluckY * this.wave_halfheight;
-            }
+            // if(false && this.pluck_coordinates) {
+            //     let pluckY = this.getPluckY(this.time_diff, this.pluck_coordinates, this.num_steps, i);
+            //     let fade = Math.pow(Math.max(0, (50-this.time_diff)/50), 3)
+            //     coords.y = (1-fade)*coords.y + fade * pluckY * this.wave_halfheight;
+            // }
             coords.y = coords.y;
             coords.y = coords.y;
             this.context.lineTo(coords.x + this.string_position.x, coords.y + this.string_position.y);
@@ -122,8 +124,14 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
 
     this.set_pluck_offsets = function(offsetX, offsetY) {
         this.plucking = true;
+        this.playing = false;
         this.pluck_offset_x = offsetX;
-        this.pluck_offset_y = offsetY;
+        this.string_slack = 50;
+        this.pluck_offset_y = Math.max(this.string_center.y-this.string_slack, Math.min(this.string_center.y+this.string_slack, offsetY));
+
+        if(Math.abs(offsetY - this.pluck_offset_y) > this.string_slack) {
+            this.executePluck(this.pluck_offset_x, this.pluck_offset_y);
+        }
     }
 
     this.draw_pluck = function(offsetX, offsetY) {
@@ -136,8 +144,6 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
             }
         }
         let context = this.context;
-        context.fillStyle = "rgba(0,0,0, 1)";
-        context.fillRect(0, 0, context.width, context.height);
 
         let string_y = this.string_position.y;
 
@@ -201,10 +207,13 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         var AudioContext = window.webkitAudioContext || window.AudioContext || false; 
 
         if(AudioContext) {
-            var audio_context = new AudioContext();
-            this.setup_audio(audio_context)
+            this.stop_sound();
+            if(!window.audio_context) {
+                window.audio_context = new AudioContext();
+            }
+            this.setup_audio(window.audio_context)
             this.play_sound();
-            setTimeout(() => {
+            this.timeoutHandler = setTimeout(() => {
                 this.stop_sound();
             }, this.duration);
         }
@@ -213,7 +222,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     this.setup_audio = function(audio_context) {
 
         this.xs = [];
-        this.counter = 0;
+        this.counter_b = 0;
         this.audio_context = audio_context;
         this.sampleRate = audio_context.sampleRate; // 44100 by default
         this.sampleRateMillisecond = this.sampleRate / 1000;
@@ -245,23 +254,21 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     
         let cumulative_amplitude = 0;
     
-        this.fadeout_counter = 0;
-    
         for (let i = 0; i < buffer_size; i++) {
             cumulative_amplitude = 0;
     
             for (let j = 0; j < this.overtones.length; j++) {
                 let overtone = this.overtones[j];
     
-                let envelope_amplitude = this.autoEnvelopeValue(overtone, this.counter / (this.sampleRateMillisecond ));
+                let envelope_amplitude = this.autoEnvelopeValue(overtone, this.counter_b / (this.sampleRateMillisecond ));
                 //let pitch_bend = wave.currentPitchBend(this.counter / (this.sampleRateMillisecond * wave.duration));
                 //let current_freq = Notes.relative_note(wave.freq, pitch_bend);
     
-                let current_freq = overtone.freq;
+                let current_freq = overtone.freq * (200/this.string_width);
                 // square env. amplitude to convert it to a logarithmic scale which better suits our perception
                 let current_amplitude = envelope_amplitude * envelope_amplitude * this.gain;
     
-                // accumulate wave vals for all tones
+                // accumulate wave x axis radian vals for all tones
                 if(this.xs[j] == undefined) {
                     this.xs[j] = 0;
                 }
@@ -278,25 +285,31 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
                 setTimeout(() => {
                     this.node.disconnect();
                     this.gain_node.disconnect();
+                    console.log("plucked", this.counter)
                 }, 15);
             }
             for(let k = 0; k < num_channels; k++) {
                 channels[k][i] = cumulative_amplitude;
             }
             this.counter += 1;
+            this.counter_b += 1;
         }
     }
 
     this.play_sound = function() {
-        this.node.connect(this.gain_node);
         this.playing = true;
         this.plucking = false;
         this.stopped = false;
+        this.node.connect(this.gain_node);
     }
 
     this.stop_sound = function() {
+        if(this.timeoutHandler) {
+            clearTimeout(this.timeoutHandler);
+            this.timeoutHandler = null;
+        }
         this.playing = false;
-        this.fadeout_counter = 0;
+        
     }
 
     

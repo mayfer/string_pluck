@@ -62,7 +62,7 @@
                         string_width: 100,
                     },
                     {
-                        string_center: {x: 700, y: 700},
+                        string_center: {x: 800, y: 600},
                         string_width: 200,
                     },
                 ]
@@ -72,7 +72,7 @@
                 for(let string of initial_strings) {
                     var drawWave = new pluckableString({
                         canvas: canvas_jq.get(0),
-                        overtones,
+                        overtones: JSON.parse(JSON.stringify(overtones)),
                         wave_height: 50,
                         string_width: string.string_width,
                         string_center: string.string_center,
@@ -133,26 +133,29 @@
                 $(document).on('mousedown touchstart', (e) => {
                     e.preventDefault();
                     let {offsetX, offsetY} = click_or_touch_coordinates(e);
-                    strings[0].set_pluck_offsets(offsetX, offsetY);
-                    strings[0].playing = false;
-                    strings.forEach(s => s.stop_sound());
+                    strings.forEach(string => {
+                        string.plucking = false;
+                        if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width) {
+                            string.set_pluck_offsets(offsetX, offsetY);
+                            string.stop_sound()
+                        }
+                    });
                 })
 
                 $(document).on('mouseup touchend', (e) => {
                     e.preventDefault();
                     let {offsetX, offsetY} = click_or_touch_coordinates(e);
 
-                    strings.map(s => {
-                        if(s.plucking) {
-                            play(strings[0], {offsetX, offsetY})
-                            s.plucking = false;
+                    strings.forEach(string => {
+                        if(string.plucking) {
+                            play(string, {offsetX, offsetY})
                         }
                     });
                 })
                 $(document).on('mousemove touchmove', (e) => {
                     e.preventDefault();
                     let {offsetX, offsetY} = click_or_touch_coordinates(e);
-                    strings.map(s => {
+                    strings.forEach(s => {
                         if(s.plucking) {
                             s.set_pluck_offsets(offsetX, offsetY)
                         }
