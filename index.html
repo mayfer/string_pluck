@@ -52,20 +52,14 @@
                 var overtones = overtone_freqs.map(freq => { return {freq, amplitude: 1} });
 
 
-                let initial_strings = [
-                    {
-                        string_center: {x: 400, y: 300},
-                        string_width: 400,
-                    },
-                    {
-                        string_center: {x: 100, y: 200},
-                        string_width: 100,
-                    },
-                    {
-                        string_center: {x: 800, y: 600},
-                        string_width: 200,
-                    },
-                ]
+                let initial_strings = []
+
+                for(var i=0; i<=20; i++) {
+                    initial_strings.push({
+                        string_center: {x: canvas_jq.width()/2, y: 100 + (i+1) * 30},
+                        string_width: Notes.relative_note(440, -i) 
+                    });
+                }
 
                 let strings = [];
 
@@ -101,14 +95,7 @@
                     requestAnimationFrame(frame)
                 }
 
-                frame()
-
-
-                function play(string, {offsetX, offsetY}) {
-
-                    string.executePluck(offsetX, offsetY)
-                    
-                }
+                frame();
 
                 function click_or_touch_coordinates(e) {
                     if(e.type == 'touchstart' || e.type == 'touchmove' || e.type == 'touchend' || e.type == 'touchcancel'){
@@ -135,7 +122,7 @@
                     let {offsetX, offsetY} = click_or_touch_coordinates(e);
                     strings.forEach(string => {
                         string.plucking = false;
-                        if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width) {
+                        if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - string.string_slack && offsetY < string.string_position.y + string.string_slack) {
                             string.set_pluck_offsets(offsetX, offsetY);
                             string.stop_sound()
                         }
@@ -148,13 +135,23 @@
 
                     strings.forEach(string => {
                         if(string.plucking) {
-                            play(string, {offsetX, offsetY})
+                            string.pluck(offsetX, offsetY)
                         }
                     });
                 })
                 $(document).on('mousemove touchmove', (e) => {
                     e.preventDefault();
                     let {offsetX, offsetY} = click_or_touch_coordinates(e);
+                    let always_pluck = true;
+                    if(always_pluck) {
+                        strings.forEach(string => {
+                            if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - string.string_slack && offsetY < string.string_position.y + string.string_slack) {
+
+                                string.set_pluck_offsets(offsetX, offsetY);
+                                string.stop_sound()
+                            }
+                        });
+                    }
                     strings.forEach(s => {
                         if(s.plucking) {
                             s.set_pluck_offsets(offsetX, offsetY)

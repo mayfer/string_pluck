@@ -1,4 +1,4 @@
-X_INCREMENT = 1;
+X_INCREMENT = 5;
 
 
 function pluckableString({canvas, overtones, wave_height, string_width, string_center, angle, duration}) {
@@ -17,11 +17,13 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     this.num_steps = Math.floor(this.string_width / X_INCREMENT);
 
     this.base_freq = 110;
+    this.string_slack = 20;
 
     this.playing = false;
 
     this.counter = 0;
-    this.counter_b = 0;
+
+    this.phase = 0;
 
     this.fourier = function(points) {
         let freqs = {};
@@ -38,9 +40,10 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     }
 
     this.autoEnvelopeValue = function(overtone, time_diff) {
-        let percent_progress = time_diff / this.duration;
+        let percent_progress = Math.min(1, time_diff / this.duration);
         let { freq, amplitude } = overtone;
         let auto = amplitude * Math.pow(Math.pow(1 - percent_progress, freq/this.base_freq), 2)
+
         return auto;
     }
 
@@ -62,21 +65,6 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         return y;
     };
 
-    this.getPluckY = function(time_diff, pluck_coordinates, sample_size, index) {
-        return "FIX THIS"
-        let offsetX = pluck_coordinates.x, offsetY = pluck_coordinates.y;
-        let pluck_index = Math.floor(pluck_coordinates.x * sample_size);
-
-        if(index<=pluck_index) {
-            start_y = 0;
-            end_y = offsetY
-            return start_y + end_y*(index/pluck_index);
-        } else {
-            start_y = offsetY;
-            end_y = 0;
-            return start_y*((sample_size-index)/(sample_size-pluck_index));
-        }
-    }
     this.draw_still = function() {
         let context = this.context;
 
@@ -92,10 +80,10 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     this.draw = function() {
         this.time_diff = this.start_time ? Date.now() - this.start_time : 0;
 
-        this.context.fillRect(0, 0, this.context.width, this.context.height);
+        //this.context.fillRect(0, 0, this.context.width, this.context.height);
         this.context.beginPath();
         this.context.moveTo(this.string_position.x, this.string_position.y);
-        for(let i = 0; i <= this.num_steps; i+=X_INCREMENT) {
+        for(let i = 0; i <= this.string_width; i+=X_INCREMENT) {
             let coords = {x: 0, y: 0};
             for(let j = 0; j < this.overtones.length; j++) {
                 let overtone = this.overtones[j];
@@ -126,11 +114,11 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         this.plucking = true;
         this.playing = false;
         this.pluck_offset_x = offsetX;
-        this.string_slack = 50;
         this.pluck_offset_y = Math.max(this.string_center.y-this.string_slack, Math.min(this.string_center.y+this.string_slack, offsetY));
 
-        if(Math.abs(offsetY - this.pluck_offset_y) > this.string_slack) {
-            this.executePluck(this.pluck_offset_x, this.pluck_offset_y);
+        if(Math.abs(offsetY - this.pluck_offset_y) > this.string_slack || offsetX < this.string_position.x || offsetX > this.string_position.x + this.string_width) {
+            this.pluck(this.pluck_offset_x, this.pluck_offset_y);
+            console.log("auto plucked")
         }
     }
 
@@ -177,8 +165,15 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         }
     }
 
+    this.pluck = function(offsetX, offsetY) {
+        if(this.playing) {
+            this.stop_sound(() => this.executePluck(offsetX, offsetY));
+        } else {
+            this.executePluck(offsetX, offsetY);
+        }
+    }
+
     this.executePluck = function(offsetX, offsetY) {
-        //let freqs = stringFFT(points);
         let points = [];
         let count = 100;
         let relativeX = (offsetX - this.string_position.x);
@@ -199,46 +194,42 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
             this.overtones[wi].amplitude = (freqs[this.overtones[wi].freq]) / 5
         }
 
-
-
         this.start_time = Date.now();
         this.playing = true;
 
         var AudioContext = window.webkitAudioContext || window.AudioContext || false; 
 
         if(AudioContext) {
-            this.stop_sound();
+            //this.stop_sound();
             if(!window.audio_context) {
                 window.audio_context = new AudioContext();
             }
             this.setup_audio(window.audio_context)
             this.play_sound();
-            this.timeoutHandler = setTimeout(() => {
-                this.stop_sound();
-            }, this.duration);
         }
     }
 
     this.setup_audio = function(audio_context) {
-
+        
+        this.counter = 0;
         this.xs = [];
-        this.counter_b = 0;
+        // dont blow up ears
+        this.gain = Math.min(1, 1 / Math.max(...overtones.map(w => Math.abs(w.amplitude))));
         this.audio_context = audio_context;
         this.sampleRate = audio_context.sampleRate; // 44100 by default
         this.sampleRateMillisecond = this.sampleRate / 1000;
-
-
-        // dont blow up ears
-        this.gain = Math.min(1, 1 / Math.max(...overtones.map(w => Math.abs(w.amplitude))));
-    
+        
         if(audio_context.createJavaScriptNode) {
             this.node = audio_context.createJavaScriptNode(1024, 1, 2);
         } else {
             this.node = audio_context.createScriptProcessor(1024, 1, 2);
         }
-        this.gain_node = audio_context.createGain();
-        this.gain_node.connect(audio_context.destination);
-
+        if(!this.gain_node) {
+            this.gain_node = audio_context.createGain();
+            this.gain_node.connect(audio_context.destination);
+        }
+        this.node.connect(this.gain_node);
+        
         this.node.onaudioprocess = (e) => this.audio_buffer_handler(e);
     }
 
@@ -247,7 +238,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         let channels = [ e.outputBuffer.getChannelData(0), e.outputBuffer.getChannelData(1) ];
     
         let y;
-        let phase = 0;
+        let phase = this.phase;
     
         let buffer_size = channels[0].length;
         let num_channels = channels.length;
@@ -256,63 +247,76 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     
         for (let i = 0; i < buffer_size; i++) {
             cumulative_amplitude = 0;
-    
-            for (let j = 0; j < this.overtones.length; j++) {
-                let overtone = this.overtones[j];
-    
-                let envelope_amplitude = this.autoEnvelopeValue(overtone, this.counter_b / (this.sampleRateMillisecond ));
-                //let pitch_bend = wave.currentPitchBend(this.counter / (this.sampleRateMillisecond * wave.duration));
-                //let current_freq = Notes.relative_note(wave.freq, pitch_bend);
-    
-                let current_freq = overtone.freq * (200/this.string_width);
-                // square env. amplitude to convert it to a logarithmic scale which better suits our perception
-                let current_amplitude = envelope_amplitude * envelope_amplitude * this.gain;
-    
-                // accumulate wave x axis radian vals for all tones
-                if(this.xs[j] == undefined) {
-                    this.xs[j] = 0;
-                }
 
-                y = Math.sin(this.xs[j] + phase);
-                this.xs[j] += Math.PI * 2 * current_freq / this.sampleRate;
-                
-                cumulative_amplitude += (current_amplitude * y) / this.overtones.length;
-                
-            }
-            if(!this.playing && !this.stopped) {
-                this.stopped = true;
-                this.gain_node.gain.linearRampToValueAtTime(0, this.audio_context.currentTime + 0.01);
-                setTimeout(() => {
-                    this.node.disconnect();
-                    this.gain_node.disconnect();
-                    console.log("plucked", this.counter)
-                }, 15);
+            if(this.gain_node.gain.value > 0.0001) {
+
+                for (let j = 0; j < this.overtones.length; j++) {
+                    let overtone = this.overtones[j];
+        
+                    let envelope_amplitude = this.autoEnvelopeValue(overtone, this.counter / (this.sampleRateMillisecond ));
+                    //let pitch_bend = wave.currentPitchBend(this.counter / (this.sampleRateMillisecond * wave.duration));
+                    //let current_freq = Notes.relative_note(wave.freq, pitch_bend);
+        
+                    let current_freq = overtone.freq * (400/this.string_width);
+                    // square env. amplitude to convert it to a logarithmic scale which better suits our perception
+                    let current_amplitude = envelope_amplitude * envelope_amplitude * this.gain;
+        
+                    // accumulate wave x axis radian vals for all tones
+                    if(this.xs[j] == undefined) {
+                        this.xs[j] = 0;
+                    }
+    
+                    y = Math.sin(this.xs[j] + phase);
+                    
+                    this.xs[j] += Math.PI * 2 * current_freq / this.sampleRate;
+                    
+                    cumulative_amplitude += (current_amplitude * y) / this.overtones.length;
+                }
             }
             for(let k = 0; k < num_channels; k++) {
                 channels[k][i] = cumulative_amplitude;
             }
             this.counter += 1;
-            this.counter_b += 1;
         }
     }
 
     this.play_sound = function() {
         this.playing = true;
         this.plucking = false;
-        this.stopped = false;
-        this.node.connect(this.gain_node);
+        //this.node.connect(this.gain_node);
+        this.gain_node.gain.setTargetAtTime(1, 0, 0.05);
     }
 
-    this.stop_sound = function() {
-        if(this.timeoutHandler) {
-            clearTimeout(this.timeoutHandler);
-            this.timeoutHandler = null;
-        }
+    this.stop_sound = function(done) {
         this.playing = false;
-        
+        if(this.gain_node) {
+            this.gain_node.gain.setTargetAtTime(0, 0, 0.005);
+            let node = this.node;
+            setTimeout(() => {
+                node.disconnect();
+                if(done) done()
+            }, 30)
+        }
     }
 
     
+    /*
+    this.getPluckY = function(time_diff, pluck_coordinates, sample_size, index) {
+        return "FIX THIS"
+        let offsetX = pluck_coordinates.x, offsetY = pluck_coordinates.y;
+        let pluck_index = Math.floor(pluck_coordinates.x * sample_size);
+
+        if(index<=pluck_index) {
+            start_y = 0;
+            end_y = offsetY
+            return start_y + end_y*(index/pluck_index);
+        } else {
+            start_y = offsetY;
+            end_y = 0;
+            return start_y*((sample_size-index)/(sample_size-pluck_index));
+        }
+    }
+    */
 
     return this;
 }
