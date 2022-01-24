@@ -40,7 +40,7 @@
                     this.addEventListener("mousewheel", handle, { passive: false });
                 }
             };
-            $(document).one('click', function() {
+            $(document).ready(function() {
 
                 // create a drawing area inside an element
                 var canvas_jq = new Canvas($('#draw'));
