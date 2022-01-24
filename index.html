@@ -57,7 +57,8 @@
                 for(var i=0; i<=20; i++) {
                     initial_strings.push({
                         string_center: {x: canvas_jq.width()/2, y: 100 + (i+1) * 30},
-                        string_width: Notes.relative_note(440, -i) 
+                        string_width: Notes.relative_note(440, -i),
+                        angle: i * Math.PI / 64
                     });
                 }
 
@@ -70,7 +71,7 @@
                         wave_height: 50,
                         string_width: string.string_width,
                         string_center: string.string_center,
-                        angle: 0,
+                        angle: string.angle,
                         duration
                     })
                     strings.push(drawWave);
@@ -120,13 +121,18 @@
                 $(document).on('mousedown touchstart', (e) => {
                     e.preventDefault();
                     let {offsetX, offsetY} = click_or_touch_coordinates(e);
+                    let plucking = false;
                     strings.forEach(string => {
                         string.plucking = false;
                         if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - string.string_slack && offsetY < string.string_position.y + string.string_slack) {
                             string.set_pluck_offsets(offsetX, offsetY);
                             string.stop_sound()
+                            plucking = true;
                         }
                     });
+                    if(!plucking) {
+                        // draw string mode
+                    }
                 })
 
                 $(document).on('mouseup touchend', (e) => {

@@ -8,6 +8,8 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     this.wave_halfheight = this.wave_height / 2;
     this.center = this.wave_halfheight;
 
+    this.angle = angle;
+
     this.duration = duration;
     
     this.string_center = string_center;
@@ -67,22 +69,34 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
 
     this.draw_still = function() {
         let context = this.context;
-
         context.fillStyle = "rgba(0, 0, 0, 0.3)";
         context.lineWidth = 2;
         context.strokeStyle = "#fff";
 
+        context.save();
+        context.translate(this.string_center.x, this.string_center.y);
+        context.rotate(this.angle);
+        context.translate(-this.string_center.x, -this.string_center.y);
+        
+        
         context.beginPath();
         context.moveTo(this.string_position.x, this.string_position.y);
         context.lineTo(this.string_position.x + this.string_width, this.string_position.y);
         context.stroke();
+        context.restore();
     }
     this.draw = function() {
         this.time_diff = this.start_time ? Date.now() - this.start_time : 0;
+        let context = this.context;
+        context.save();
+        context.translate(this.string_center.x, this.string_center.y);
+        context.rotate(this.angle);
+        context.translate(-this.string_center.x, -this.string_center.y);
+        
 
         //this.context.fillRect(0, 0, this.context.width, this.context.height);
-        this.context.beginPath();
-        this.context.moveTo(this.string_position.x, this.string_position.y);
+        context.beginPath();
+        context.moveTo(this.string_position.x, this.string_position.y);
         for(let i = 0; i <= this.string_width; i+=X_INCREMENT) {
             let coords = {x: 0, y: 0};
             for(let j = 0; j < this.overtones.length; j++) {
@@ -107,7 +121,8 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
             coords.y = coords.y;
             this.context.lineTo(coords.x + this.string_position.x, coords.y + this.string_position.y);
         }
-        this.context.stroke();
+        context.stroke();
+        context.restore();
     };
 
     this.set_pluck_offsets = function(offsetX, offsetY) {
@@ -123,6 +138,12 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     }
 
     this.draw_pluck = function(offsetX, offsetY) {
+        let context = this.context;
+        context.save();
+        context.translate(this.string_center.x, this.string_center.y);
+        context.rotate(this.angle);
+        context.translate(-this.string_center.x, -this.string_center.y);
+
         if(!offsetX) {
             if(!this.pluck_offset_x) {
                 return;
@@ -131,7 +152,6 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
                 offsetY = this.pluck_offset_y;
             }
         }
-        let context = this.context;
 
         let string_y = this.string_position.y;
 
@@ -140,6 +160,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         context.lineTo(offsetX, offsetY);
         context.lineTo(this.string_position.x + this.string_width, this.string_position.y);
         context.stroke();
+        context.restore();
 
         this.pluck_coordinates = {
             x: (offsetX - this.string_position.x) / this.string_width,
