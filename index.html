@@ -40,7 +40,7 @@
                     this.addEventListener("mousewheel", handle, { passive: false });
                 }
             };
-            $(document).ready(function() {
+            $(document).one('click', function() {
 
                 // create a drawing area inside an element
                 var canvas_jq = new Canvas($('#draw'));
@@ -54,11 +54,11 @@
 
                 let initial_strings = []
 
-                for(var i=0; i<=20; i++) {
+                for(var i=0; i<=100; i++) {
                     initial_strings.push({
-                        string_center: {x: canvas_jq.width()/2, y: 100 + (i+1) * 30},
+                        string_center: {x: canvas_jq.width()/2, y: 100 + (i+1) * 10},
                         string_width: Notes.relative_note(440, -i),
-                        angle: i * Math.PI / 64
+                        angle: 0, // i * Math.PI / 64
                     });
                 }
 
@@ -67,7 +67,7 @@
                 for(let string of initial_strings) {
                     var drawWave = new pluckableString({
                         canvas: canvas_jq.get(0),
-                        overtones: JSON.parse(JSON.stringify(overtones)),
+                        overtones: overtones.map((o, i) => { return {freq: parseInt(overtones[0].freq * 400/string.string_width) * (i+1), amplitude: o.amplitude } }),
                         wave_height: 50,
                         string_width: string.string_width,
                         string_center: string.string_center,
@@ -113,6 +113,7 @@
                     return {offsetX, offsetY};
                 }
 
+                let always_pluck = true;
 
                 $(window).blur(function(){
                     strings.forEach(s => s.stop_sound());
@@ -144,11 +145,12 @@
                             string.pluck(offsetX, offsetY)
                         }
                     });
+
+                    //always_pluck = true;
                 })
                 $(document).on('mousemove touchmove', (e) => {
                     e.preventDefault();
                     let {offsetX, offsetY} = click_or_touch_coordinates(e);
-                    let always_pluck = true;
                     if(always_pluck) {
                         strings.forEach(string => {
                             if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - string.string_slack && offsetY < string.string_position.y + string.string_slack) {

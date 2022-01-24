@@ -3,6 +3,7 @@ X_INCREMENT = 5;
 
 function pluckableString({canvas, overtones, wave_height, string_width, string_center, angle, duration}) {
     this.overtones = overtones; // {freq, amplitude}
+
     this.context = canvas.getContext("2d");
     this.wave_height = wave_height;
     this.wave_halfheight = this.wave_height / 2;
@@ -18,7 +19,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     this.string_height = wave_height;
     this.num_steps = Math.floor(this.string_width / X_INCREMENT);
 
-    this.base_freq = 110;
+    this.base_freq = overtones[0].freq;
     this.string_slack = 20;
 
     this.playing = false;
@@ -55,7 +56,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         let standing = Math.PI / this.string_width;
         let relative_freq = standing * freq / this.base_freq;
         
-        let speed_adjustment = freq / this.base_freq / 25;
+        let speed_adjustment = (freq / this.base_freq) / 25;
         
         let phase = 0;
         
@@ -133,7 +134,6 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
 
         if(Math.abs(offsetY - this.pluck_offset_y) > this.string_slack || offsetX < this.string_position.x || offsetX > this.string_position.x + this.string_width) {
             this.pluck(this.pluck_offset_x, this.pluck_offset_y);
-            console.log("auto plucked")
         }
     }
 
@@ -230,91 +230,48 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         }
     }
 
-    this.setup_audio = function(audio_context) {
+    this.setup_audio = async function(audio_context) {
+        this.audio_context = audio_context;
         
         this.counter = 0;
         this.xs = [];
         // dont blow up ears
         this.gain = Math.min(1, 1 / Math.max(...overtones.map(w => Math.abs(w.amplitude))));
-        this.audio_context = audio_context;
-        this.sampleRate = audio_context.sampleRate; // 44100 by default
-        this.sampleRateMillisecond = this.sampleRate / 1000;
-        
-        if(audio_context.createJavaScriptNode) {
-            this.node = audio_context.createJavaScriptNode(1024, 1, 2);
-        } else {
-            this.node = audio_context.createScriptProcessor(1024, 1, 2);
-        }
+
+
         if(!this.gain_node) {
             this.gain_node = audio_context.createGain();
             this.gain_node.connect(audio_context.destination);
-        }
-        this.node.connect(this.gain_node);
-        
-        this.node.onaudioprocess = (e) => this.audio_buffer_handler(e);
-    }
-
-    this.audio_buffer_handler = function(e) {
-        // Get a reference to the output buffer and fill it up.
-        let channels = [ e.outputBuffer.getChannelData(0), e.outputBuffer.getChannelData(1) ];
-    
-        let y;
-        let phase = this.phase;
-    
-        let buffer_size = channels[0].length;
-        let num_channels = channels.length;
-    
-        let cumulative_amplitude = 0;
-    
-        for (let i = 0; i < buffer_size; i++) {
-            cumulative_amplitude = 0;
-
-            if(this.gain_node.gain.value > 0.0001) {
-
-                for (let j = 0; j < this.overtones.length; j++) {
-                    let overtone = this.overtones[j];
-        
-                    let envelope_amplitude = this.autoEnvelopeValue(overtone, this.counter / (this.sampleRateMillisecond ));
-                    //let pitch_bend = wave.currentPitchBend(this.counter / (this.sampleRateMillisecond * wave.duration));
-                    //let current_freq = Notes.relative_note(wave.freq, pitch_bend);
-        
-                    let current_freq = overtone.freq * (400/this.string_width);
-                    // square env. amplitude to convert it to a logarithmic scale which better suits our perception
-                    let current_amplitude = envelope_amplitude * envelope_amplitude * this.gain;
-        
-                    // accumulate wave x axis radian vals for all tones
-                    if(this.xs[j] == undefined) {
-                        this.xs[j] = 0;
-                    }
-    
-                    y = Math.sin(this.xs[j] + phase);
-                    
-                    this.xs[j] += Math.PI * 2 * current_freq / this.sampleRate;
-                    
-                    cumulative_amplitude += (current_amplitude * y) / this.overtones.length;
-                }
+            if(!window.worklet_initialized) {
+                await audio_context.audioWorklet.addModule("./worklet.js");
+                window.worklet_initialized = true
             }
-            for(let k = 0; k < num_channels; k++) {
-                channels[k][i] = cumulative_amplitude;
-            }
-            this.counter += 1;
+            this.node = new AudioWorkletNode(audio_context, 'string-processor');
+            this.node.connect(this.gain_node);
         }
+        if(!this.node) {
+        }
+        
+        this.node.port.postMessage({overtones: this.overtones, duration: this.duration});
     }
 
     this.play_sound = function() {
         this.playing = true;
         this.plucking = false;
         //this.node.connect(this.gain_node);
-        this.gain_node.gain.setTargetAtTime(1, 0, 0.05);
+        if(this.gain_node) this.gain_node.gain.setTargetAtTime(1, 0, 0.05);
     }
 
     this.stop_sound = function(done) {
         this.playing = false;
+
+        
         if(this.gain_node) {
-            this.gain_node.gain.setTargetAtTime(0, 0, 0.005);
+            this.node.port.postMessage({stopped: true});
+            this.gain_node.gain.setTargetAtTime(0, 0, 0.01);
             let node = this.node;
             setTimeout(() => {
-                node.disconnect();
+                //node.disconnect();
                 if(done) done()
             }, 30)
         }
