@@ -51,7 +51,7 @@ class WhiteNoiseProcessor extends AudioWorkletProcessor {
         for (let i = 0; i < buffer_size; i++) {
             let cumulative_amplitude = 0;
             
-            if(this.playing) {
+            if(false && this.playing) {
                 let currentTime = this.counter / this.sampleRate
                 let percent_progress = Math.min(1, (currentTime) / this.duration);
     

@@ -3,6 +3,7 @@
     <head>
         <title>string theory, the guitar kind</title>
         <meta charset='utf-8' />
+        <link rel="shortcut icon" href="#">
         <!-- libs -->
         <script type='text/javascript' src='jquery.min.js'></script>
         <script type='text/javascript' src='unmute.js'></script>
@@ -54,10 +55,10 @@
 
                 let initial_strings = []
 
-                for(var i=0; i<=100; i++) {
+                for(var i=0; i<=20; i++) {
                     initial_strings.push({
-                        string_center: {x: canvas_jq.width()/2, y: 100 + (i+1) * 10},
-                        string_width: Notes.relative_note(440, -i),
+                        string_center: {x: canvas_jq.width()/2, y: 100 + (i+1) * 25},
+                        string_width: Notes.relative_note(440, -i) * 1.5,
                         angle: 0, // i * Math.PI / 64
                     });
                 }
@@ -153,7 +154,7 @@
                     let {offsetX, offsetY} = click_or_touch_coordinates(e);
                     if(always_pluck) {
                         strings.forEach(string => {
-                            if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - string.string_slack && offsetY < string.string_position.y + string.string_slack) {
+                            if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - 5 && offsetY < string.string_position.y + 5) {
 
                                 string.set_pluck_offsets(offsetX, offsetY);
                                 string.stop_sound()

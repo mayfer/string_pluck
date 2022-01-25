@@ -1,8 +1,10 @@
 X_INCREMENT = 5;
 
+autoincrement = 1;
 
 function pluckableString({canvas, overtones, wave_height, string_width, string_center, angle, duration}) {
     this.overtones = overtones; // {freq, amplitude}
+    this.id = autoincrement++;
 
     this.context = canvas.getContext("2d");
     this.wave_height = wave_height;
@@ -17,7 +19,6 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     this.string_width = string_width;
     this.string_position = {x: string_center.x - string_width/2, y: string_center.y};
     this.string_height = wave_height;
-    this.num_steps = Math.floor(this.string_width / X_INCREMENT);
 
     this.base_freq = overtones[0].freq;
     this.string_slack = 20;
@@ -122,6 +123,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
             coords.y = coords.y;
             this.context.lineTo(coords.x + this.string_position.x, coords.y + this.string_position.y);
         }
+        this.context.lineTo(this.string_width + this.string_position.x, this.string_position.y);
         context.stroke();
         context.restore();
     };
@@ -239,27 +241,36 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         this.gain = Math.min(1, 1 / Math.max(...overtones.map(w => Math.abs(w.amplitude))));
 
 
-        if(!this.gain_node) {
-            this.gain_node = audio_context.createGain();
-            this.gain_node.connect(audio_context.destination);
+        if(!window.gain_node) {
+            window.gain_node = audio_context.createGain();
+            window.gain_node.connect(audio_context.destination);
             if(!window.worklet_initialized) {
-                await audio_context.audioWorklet.addModule("./worklet.js");
+                await audio_context.audioWorklet.addModule("./worklet2.js");
                 window.worklet_initialized = true
             }
-            this.node = new AudioWorkletNode(audio_context, 'string-processor');
-            this.node.connect(this.gain_node);
+            window.node = new AudioWorkletNode(audio_context, 'string-processor');
+            window.node.connect(window.gain_node);
         }
-        if(!this.node) {
+        this.node = window.node;
+        this.gain_node = window.gain_node;
+        this.sync_worklet();
+    }
+
+    this.sync_worklet = function() {
+        let string = {
+            id: this.id,
+            overtones: this.overtones,
+            duration: this.duration,
+            playing: this.playing,
         }
-        
-        this.node.port.postMessage({overtones: this.overtones, duration: this.duration});
+        if(this.node) this.node.port.postMessage({string});
     }
 
     this.play_sound = function() {
         this.playing = true;
         this.plucking = false;
         //this.node.connect(this.gain_node);
-        if(this.gain_node) this.gain_node.gain.setTargetAtTime(1, 0, 0.05);
+        //if(this.gain_node) this.gain_node.gain.setTargetAtTime(1, 0, 0.05);
     }
 
     this.stop_sound = function(done) {
@@ -267,8 +278,9 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
 
         
         if(this.gain_node) {
-            this.node.port.postMessage({stopped: true});
-            this.gain_node.gain.setTargetAtTime(0, 0, 0.01);
+            //this.node.port.postMessage({stopped: true});
+            this.sync_worklet();
+            //this.gain_node.gain.setTargetAtTime(0, 0, 0.01);
             let node = this.node;
             setTimeout(() => {
                 //node.disconnect();
