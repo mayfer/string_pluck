@@ -59,7 +59,7 @@ class WhiteNoiseProcessor extends AudioWorkletProcessor {
                         let envelope_amplitude = overtone.amplitude * Math.pow(Math.pow(1 - percent_progress, Math.max(1, overtone.freq/string.base_freq)), 2);
                         
                         // square env. amplitude to convert it to a logarithmic scale which better suits our perception
-                        let current_amplitude = envelope_amplitude * envelope_amplitude * string.gain / 5;
+                        let current_amplitude = envelope_amplitude * envelope_amplitude * string.gain / 3;
                         
                         // accumulate wave x axis radian vals for all tones
                         if(!overtone.xs) {

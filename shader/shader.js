@@ -77,11 +77,24 @@
   
   vec2 mainSound(float time) {
     float sum = 0.0;
-    float amp = 0.1;
-    float freq = u_freq;
-    for(freq = u_freq ; freq <= u_freq * 15.0; freq += u_freq){
-        float damp = amp * pow(pow(1.0 - (time/3.0), freq/110.0), 3.0);
-        sum += sine(freq, time) * damp;
+    float amp = 1.0 / 200.0;
+    float freq;
+    float ofreq;
+    float ttime = time;
+
+    for (int i = 0; i < 200; i++) {
+        ttime -= 0.01;
+        float ii = float(i);
+        freq = u_freq;
+        ofreq = exp(log(freq) + 0.05776226 * ii);
+        for(freq = ofreq ; freq <= ofreq * 15.0; freq += ofreq){
+            if(ttime > 0.0) {
+                float damp = amp * pow(pow(1.0 - (ttime/10.0), freq/ofreq), 2.0);
+                if(damp > 0.001) {
+                    sum += sine(freq, time) * damp;
+                }
+            }
+        }
     }
     return vec2(sum);
   }
@@ -97,11 +110,13 @@
   }
   `;
 
-  const audioCtx = new AudioContext();
-    function createAudio(freq) {
+  let audioCtx
+
+  function createAudio(freq) {
+        audioCtx = new AudioContext();
         freq = parseFloat(freq)
         const DURATION = 3; // seconds
-        const WIDTH = 2048;
+        const WIDTH = 256;
         const HEIGHT = 1;
 
         //const audioBuffer = audioCtx.createBuffer(2, 1024, audioCtx.sampleRate);
@@ -143,9 +158,9 @@
             }
 
             i += 1;
-            if(i * samples >= audioCtx.sampleRate * DURATION) {
-                node.disconnect();
-            }
+            // if(i * samples >= audioCtx.sampleRate * DURATION) {
+            //     node.disconnect();
+            // }
             
         };
         node.connect(audioCtx.destination);
