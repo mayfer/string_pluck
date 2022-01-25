@@ -17,15 +17,32 @@ class WhiteNoiseProcessor extends AudioWorkletProcessor {
             //console.log(e.data)
             this.playing = !e.data.stopped;
             if(this.playing) {
-                this.counter = 0;
-                this.xs = [];
-                this.overtones = e.data.overtones;
-                this.base_freq = this.overtones[0].freq
+                this.queueStringUpdate(e.data.overtones)
+            } else {
+                this.stopped_at = this.counter;
 
-                this.gain = 1 / Math.min(1, 1 / Math.max(...this.overtones.map(w => Math.abs(w.amplitude))));
             }
             //this.duration = e.data.duration;
         }
+    }
+
+    queueStringUpdate(overtones) {
+        // this.queued_overtones = overtones;
+        // this.stop_duration = 0.02;
+        // this.stop_at = this.counter + parseInt(this.sampleRate * this.stop_duration);
+        this.updateString(overtones);
+    }
+
+    updateString(overtones) {
+        this.counter = 0;
+        this.xs = [];
+        this.overtones = overtones;
+        this.base_freq = overtones[0].freq
+
+        this.queued_overtones = null;
+        this.stop_at = null;
+
+        this.gain = 1 / Math.min(1, 1 / Math.max(...overtones.map(w => Math.abs(w.amplitude))));
     }
 
     process(inputs, outputs, parameters) {
@@ -50,18 +67,27 @@ class WhiteNoiseProcessor extends AudioWorkletProcessor {
         
         for (let i = 0; i < buffer_size; i++) {
             let cumulative_amplitude = 0;
+
+            // let anti_crackle = 1;
+            // if(this.stop_at) {
+            //     anti_crackle = Math.max(0, Math.min(1, (this.stop_at - this.counter) / this.stop_duration));
+            // }
+            // if(anti_crackle == 1 && this.queued_overtones) {
+            //     this.updateString(this.queued_overtones)
+            // }
             
-            if(false && this.playing) {
-                let currentTime = this.counter / this.sampleRate
-                let percent_progress = Math.min(1, (currentTime) / this.duration);
-    
+
+            let currentTime = this.counter / this.sampleRate
+            let percent_progress = Math.min(1, (currentTime) / this.duration);
+
+            if(true || this.playing) {
                 for (let j = 0; j < this.overtones.length; j++) {
                     let overtone = this.overtones[j];
                     
                     let envelope_amplitude = overtone.amplitude * Math.pow(Math.pow(1 - percent_progress, Math.max(1, overtone.freq/this.base_freq)), 2);
                     
                     // square env. amplitude to convert it to a logarithmic scale which better suits our perception
-                    let current_amplitude = envelope_amplitude * envelope_amplitude * this.gain / 30;
+                    let current_amplitude = envelope_amplitude * envelope_amplitude * this.gain / 10;
                     
                     // accumulate wave x axis radian vals for all tones
                     if(this.xs[j] == undefined) {
