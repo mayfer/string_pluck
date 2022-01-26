@@ -138,16 +138,15 @@
                 });
 
                 $("#start-button").one('click', async function(e) {
-                    let audio_context = new AudioContext();
+                    window.audio_context = new AudioContext();
 
                     if(!window.worklet_initialized) {
-                        await audio_context.audioWorklet.addModule("./worklet.js");
+                        await window.audio_context.audioWorklet.addModule("./worklet.js");
                         window.worklet_initialized = true
                     }
-                    for(let i=0; i<strings.length; i++) {
-                        strings[i].setup_audio(audio_context);
-                    }
+
                     $(this).remove()
+
                     $(document).on('mousedown touchstart', (e) => {
                         e.preventDefault();
                         let {offsetX, offsetY} = click_or_touch_coordinates(e);

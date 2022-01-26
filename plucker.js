@@ -196,7 +196,8 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         this.play_sound();
     }
 
-    this.setup_audio = function(audio_context) {
+    this.setup_audio = function() {
+        let audio_context = window.audio_context;
         if(!this.node) {
             this.node = new AudioWorkletNode(audio_context, 'string-processor');
             this.node.connect(audio_context.destination);
@@ -205,6 +206,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     }
     
     this.play_sound = function() {
+        this.setup_audio();
         this.playing = true;
         this.plucking = false;
         if(this.node) this.node.port.postMessage({overtones: this.overtones, duration: this.duration});
