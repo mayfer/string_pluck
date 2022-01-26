@@ -19,7 +19,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     this.string_height = wave_height;
 
     this.base_freq = overtones[0].freq;
-    this.string_slack = 20;
+    this.string_slack = 40;
 
     this.playing = false;
 
