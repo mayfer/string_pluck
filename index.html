@@ -17,7 +17,7 @@
     flex-direction: column;  /* make main axis vertical */
     justify-content: center; /* center items vertically, in this case */
     align-items: center;     /* center items horizontally, in this case */}
-            #draw { width: 100%; height: 100%; border: 3px solid transparent; }
+            #draw { width: 100%; height: 100%; }
             #save { margin: 10px; font-size: 20px; line-height: 25px; }
             #start-button { position: absolute; height: 100px; line-height: 100px; font-size: 40px; cursor: pointer; width: 300px; text-align: center; background: #fff; color: #000; top: 50%; left: 50%; transform: translate(-50%, -50%); }
             #start-button:hover { background: #aaa; }
@@ -137,91 +137,89 @@
                     init()
                 });
 
-                $("#start-button").one('click', async function(e) {
-                    window.audio_context = new AudioContext();
 
-                    if(!window.worklet_initialized) {
-                        await window.audio_context.audioWorklet.addModule("./worklet.js");
-                        window.worklet_initialized = true
+                window.audio_context = new AudioContext();
+
+                if(!window.worklet_initialized) {
+                    window.audio_context.audioWorklet.addModule("./worklet.js");
+                    window.worklet_initialized = true
+                }
+
+
+                $(document).on('mousedown touchstart', (e) => {
+                    e.preventDefault();
+                    let {offsetX, offsetY} = click_or_touch_coordinates(e);
+                    prev_cursor = {x: offsetX, y: offsetY};
+                    let plucking = false;
+                    strings.forEach(string => {
+                        string.plucking = false;
+                        if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - 5 && offsetY < string.string_position.y + 5) {
+                            string.set_pluck_offsets(offsetX, offsetY);
+                            string.stop_sound()
+                            plucking = true;
+                        }
+                    });
+                    if(!plucking) {
+                        // draw string mode
                     }
+                    always_pluck = true;
+                })
 
-                    $(this).remove()
+                $(document).on('mouseup touchend', (e) => {
+                    e.preventDefault();
+                    prev_cursor = null;
+                    let {offsetX, offsetY} = click_or_touch_coordinates(e);
+                    
+                    strings.forEach(string => {
+                        if(string.plucking) {
+                            string.pluck(offsetX, offsetY)
+                        }
+                    });
+                    
+                    always_pluck = false;
+                })
 
-                    $(document).on('mousedown touchstart', (e) => {
-                        e.preventDefault();
-                        let {offsetX, offsetY} = click_or_touch_coordinates(e);
-                        prev_cursor = {x: offsetX, y: offsetY};
-                        let plucking = false;
+                let cursor_move_handler = function(offsetX, offsetY) {
+                    if(always_pluck) {
                         strings.forEach(string => {
-                            string.plucking = false;
                             if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - 5 && offsetY < string.string_position.y + 5) {
+
                                 string.set_pluck_offsets(offsetX, offsetY);
                                 string.stop_sound()
-                                plucking = true;
-                            }
-                        });
-                        if(!plucking) {
-                            // draw string mode
-                        }
-                        always_pluck = true;
-                    })
-    
-                    $(document).on('mouseup touchend', (e) => {
-                        e.preventDefault();
-                        prev_cursor = null;
-                        let {offsetX, offsetY} = click_or_touch_coordinates(e);
-                        
-                        strings.forEach(string => {
-                            if(string.plucking) {
-                                string.pluck(offsetX, offsetY)
-                            }
-                        });
-                        
-                        always_pluck = false;
-                    })
-    
-                    let cursor_move_handler = function(offsetX, offsetY) {
-                        if(always_pluck) {
-                            strings.forEach(string => {
-                                if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - 5 && offsetY < string.string_position.y + 5) {
-    
-                                    string.set_pluck_offsets(offsetX, offsetY);
-                                    string.stop_sound()
-                                }
-                            });
-                        }
-                        strings.forEach(s => {
-                            if(s.plucking) {
-                                s.set_pluck_offsets(offsetX, offsetY)
                             }
                         });
                     }
-                    $(document).on('mousemove touchmove', (e) => {
-                        e.preventDefault();
-                        let {offsetX, offsetY} = click_or_touch_coordinates(e);
-                        if(prev_cursor) {
-                            let distance = Math.sqrt(Math.pow(offsetX - prev_cursor.x, 2) + Math.pow(offsetY - prev_cursor.y, 2));
-                            if(distance > 5) {
-                                let slices = Math.floor(distance / 5);
-                                for(let i=1; i<=slices; i++) {
-                                    cursor_move_handler(prev_cursor.x + i*(offsetX - prev_cursor.x)/slices, prev_cursor.y + i*(offsetY - prev_cursor.y)/slices);
-                                }
+                    strings.forEach(s => {
+                        if(s.plucking) {
+                            s.set_pluck_offsets(offsetX, offsetY)
+                        }
+                    });
+                }
+                $(document).on('mousemove touchmove', (e) => {
+                    e.preventDefault();
+                    let {offsetX, offsetY} = click_or_touch_coordinates(e);
+                    if(prev_cursor) {
+                        let distance = Math.sqrt(Math.pow(offsetX - prev_cursor.x, 2) + Math.pow(offsetY - prev_cursor.y, 2));
+                        if(distance > 5) {
+                            let slices = Math.floor(distance / 5);
+                            for(let i=1; i<=slices; i++) {
+                                cursor_move_handler(prev_cursor.x + i*(offsetX - prev_cursor.x)/slices, prev_cursor.y + i*(offsetY - prev_cursor.y)/slices);
                             }
                         }
-                        cursor_move_handler(offsetX, offsetY);
-                        prev_cursor = {x: offsetX, y: offsetY};
-                    })
-                });
-
-                
+                    }
+                    cursor_move_handler(offsetX, offsetY);
+                    prev_cursor = {x: offsetX, y: offsetY};
+                })
             });
+
+            
 
         </script>
     </head>
     <body>
         <div class='container'>
             <div id='draw'> </div>
-            <div id='start-button'>START</div>
+
         </div>
     </body>
 </html>

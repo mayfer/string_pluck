@@ -198,6 +198,9 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
 
     this.setup_audio = function() {
         let audio_context = window.audio_context;
+        if(audio_context.state === 'suspended') {
+            audio_context.resume();
+        }
         if(!this.node) {
             this.node = new AudioWorkletNode(audio_context, 'string-processor');
             this.node.connect(audio_context.destination);
