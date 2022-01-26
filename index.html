@@ -139,7 +139,9 @@
 
                 $("#start-button").on('click', function(e) {
                     let audio_context = new AudioContext();
-                    strings.forEach(s => s.setup_audio(audio_context));
+                    for(let i=0; i<strings.length; i++) {
+                        strings[i].setup_audio(audio_context);
+                    }
                     $(this).remove()
                 });
                 $(document).on('mousedown touchstart', (e) => {

@@ -197,7 +197,6 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     }
 
     this.setup_audio = async function(audio_context) {
-        this.initializing_worklet = true;
         if(!this.node) {
             if(!window.worklet_initialized) {
                 await audio_context.audioWorklet.addModule("./worklet.js");
