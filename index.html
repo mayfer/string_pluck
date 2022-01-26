@@ -55,13 +55,21 @@
 
                 let initial_strings = []
 
-                for(var i=0; i<=20; i++) {
+                for(var i=0; i<=40; i++) {
                     initial_strings.push({
-                        string_center: {x: canvas_jq.width()/2, y: 100 + (i+1) * 35},
+                        string_center: {x: canvas_jq.width()/2, y: 100 + (i+1) * 10},
                         string_width: Notes.relative_note(440, -i) * 1.5,
                         angle: 0, // i * Math.PI / 64
                     });
                 }
+
+                // for(var i=0; i<=40; i++) {
+                //     initial_strings.push({
+                //         string_center: {x: 3*canvas_jq.width()/4, y: 100 + (i+1) * 10},
+                //         string_width: Notes.relative_note(440, -i) * 1.2 ,
+                //         angle: 0, // i * Math.PI / 64
+                //     });
+                // }
 
                 let strings = [];
 
@@ -80,6 +88,11 @@
 
                 var canvas = canvas_jq.get(0);
                 var context = canvas.getContext("2d");
+
+                context.fillStyle = "rgba(0, 0, 0, 0.5)";
+                context.lineWidth = 2;
+                context.strokeStyle = "#fff";
+
 
                 function init() {
                     strings.forEach(s => s.draw_still());
@@ -114,7 +127,7 @@
                     return {offsetX, offsetY};
                 }
 
-                let always_pluck = true;
+                let always_pluck = false;
                 let prev_cursor;
 
                 $(window).blur(function(){
@@ -128,7 +141,7 @@
                     let plucking = false;
                     strings.forEach(string => {
                         string.plucking = false;
-                        if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - string.string_slack && offsetY < string.string_position.y + string.string_slack) {
+                        if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - 5 && offsetY < string.string_position.y + 5) {
                             string.set_pluck_offsets(offsetX, offsetY);
                             string.stop_sound()
                             plucking = true;
@@ -137,6 +150,7 @@
                     if(!plucking) {
                         // draw string mode
                     }
+                    always_pluck = true;
                 })
 
                 $(document).on('mouseup touchend', (e) => {
@@ -150,7 +164,7 @@
                         }
                     });
                     
-                    //always_pluck = true;
+                    always_pluck = false;
                 })
 
                 let cursor_move_handler = function(offsetX, offsetY) {

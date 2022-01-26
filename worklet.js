@@ -86,10 +86,11 @@ class WhiteNoiseProcessor extends AudioWorkletProcessor {
             if(!overtone.smooth_amplitude) {
                 overtone.smooth_amplitude = 0;
             }
+
             if(overtone.smooth_amplitude < target_amplitude) {
-                overtone.smooth_amplitude = Math.min(target_amplitude, overtone.smooth_amplitude + 0.01);
+                overtone.smooth_amplitude = Math.min(target_amplitude, overtone.smooth_amplitude + 0.005);
             } else if(overtone.smooth_amplitude > target_amplitude) {
-                overtone.smooth_amplitude = Math.max(target_amplitude, overtone.smooth_amplitude - 0.01);
+                overtone.smooth_amplitude = Math.max(target_amplitude, overtone.smooth_amplitude - 0.005);
             }
         }
         

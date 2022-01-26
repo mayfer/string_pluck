@@ -19,7 +19,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     this.string_height = wave_height;
 
     this.base_freq = overtones[0].freq;
-    this.string_slack = 40;
+    this.string_slack = 30;
 
     this.playing = false;
 
@@ -69,10 +69,6 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
 
     this.draw_still = function() {
         let context = this.context;
-        context.fillStyle = "rgba(0, 0, 0, 0.3)";
-        context.lineWidth = 2;
-        context.strokeStyle = "#fff";
-
         context.save();
         context.translate(this.string_center.x, this.string_center.y);
         context.rotate(this.angle);
@@ -130,9 +126,9 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         this.plucking = true;
         this.playing = false;
         this.pluck_offset_x = offsetX;
-        this.pluck_offset_y = Math.max(this.string_center.y-this.string_slack, Math.min(this.string_center.y+this.string_slack, offsetY));
+        this.pluck_offset_y = offsetY; //Math.max(this.string_center.y-this.string_slack, Math.min(this.string_center.y+this.string_slack, offsetY));
 
-        if(Math.abs(offsetY - this.pluck_offset_y) > this.string_slack || offsetX < this.string_position.x || offsetX > this.string_position.x + this.string_width) {
+        if(Math.abs(offsetY - this.string_position.y) > this.string_slack || offsetX < this.string_position.x || offsetX > this.string_position.x + this.string_width) {
             this.pluck(this.pluck_offset_x, this.pluck_offset_y);
         }
     }
