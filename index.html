@@ -134,6 +134,11 @@
                     strings.forEach(s => s.stop_sound());
                     init()
                 });
+
+                $(document).one('mousedown touchstart', (e) => {
+                    let audio_context = new AudioContext();
+                    strings.forEach(s => s.setup_audio(audio_context));
+                });
                 $(document).on('mousedown touchstart', (e) => {
                     e.preventDefault();
                     let {offsetX, offsetY} = click_or_touch_coordinates(e);

@@ -1,8 +1,10 @@
 X_INCREMENT = 5;
 
+let auto_increment = 1;
 
 function pluckableString({canvas, overtones, wave_height, string_width, string_center, angle, duration}) {
     this.overtones = overtones; // {freq, amplitude}
+    this.id = auto_increment++;
 
     this.context = canvas.getContext("2d");
     this.wave_height = wave_height;
@@ -22,10 +24,6 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     this.string_slack = 30;
 
     this.playing = false;
-
-    this.counter = 0;
-
-    this.phase = 0;
 
     this.fourier = function(points) {
         let freqs = {};
@@ -89,8 +87,6 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         context.rotate(this.angle);
         context.translate(-this.string_center.x, -this.string_center.y);
         
-
-        //this.context.fillRect(0, 0, this.context.width, this.context.height);
         context.beginPath();
         context.moveTo(this.string_position.x, this.string_position.y);
         for(let i = 0; i <= this.string_width; i+=X_INCREMENT) {
@@ -101,20 +97,12 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
                 let dynamic_amplitude = this.autoEnvelopeValue(overtone, this.time_diff);
                 let current_y = this.getPlotY(overtone, this.time_diff, dynamic_amplitude, i);
 
-                // x is same for all anyways
                 coords.x = i;
                 coords.y += current_y;
             }
 
 
             coords.y = coords.y / this.overtones.length;
-            // if(false && this.pluck_coordinates) {
-            //     let pluckY = this.getPluckY(this.time_diff, this.pluck_coordinates, this.num_steps, i);
-            //     let fade = Math.pow(Math.max(0, (50-this.time_diff)/50), 3)
-            //     coords.y = (1-fade)*coords.y + fade * pluckY * this.wave_halfheight;
-            // }
-            coords.y = coords.y;
-            coords.y = coords.y;
             this.context.lineTo(coords.x + this.string_position.x, coords.y + this.string_position.y);
         }
         this.context.lineTo(this.string_width + this.string_position.x, this.string_position.y);
@@ -126,7 +114,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         this.plucking = true;
         this.playing = false;
         this.pluck_offset_x = offsetX;
-        this.pluck_offset_y = offsetY; //Math.max(this.string_center.y-this.string_slack, Math.min(this.string_center.y+this.string_slack, offsetY));
+        this.pluck_offset_y = offsetY;
 
         if(Math.abs(offsetY - this.string_position.y) > this.string_slack || offsetX < this.string_position.x || offsetX > this.string_position.x + this.string_width) {
             this.pluck(this.pluck_offset_x, this.pluck_offset_y);
@@ -176,21 +164,10 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
                 end_y = 0;
                 points[i] = start_y*((count-i)/(count-pluck_index));
             }
-
-            //context.fillStyle = "rgba(0, 0, 0, 1)";
-            //context.fillRect((i/count)*canvas_jq.width(), points[i]+string_y, 5, 5);
         }
     }
 
     this.pluck = function(offsetX, offsetY) {
-        if(this.playing) {
-            this.stop_sound(() => this.executePluck(offsetX, offsetY));
-        } else {
-            this.executePluck(offsetX, offsetY);
-        }
-    }
-
-    this.executePluck = function(offsetX, offsetY) {
         let points = [];
         let count = 100;
         let relativeX = (offsetX - this.string_position.x);
@@ -216,81 +193,34 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
 
         var AudioContext = window.webkitAudioContext || window.AudioContext || false; 
 
-        if(AudioContext) {
-            //this.stop_sound();
-            if(!window.audio_context) {
-                window.audio_context = new AudioContext();
-            }
-            this.setup_audio(window.audio_context)
-            this.play_sound();
-        }
+        this.play_sound();
     }
 
     this.setup_audio = async function(audio_context) {
-        this.audio_context = audio_context;
-        
-        this.counter = 0;
-        this.xs = [];
-        // dont blow up ears
-        this.gain = Math.min(1, 1 / Math.max(...overtones.map(w => Math.abs(w.amplitude))));
-
-
-        if(!this.gain_node) {
-            this.gain_node = audio_context.createGain();
-            this.gain_node.connect(audio_context.destination);
+        this.initializing_worklet = true;
+        if(!this.node) {
             if(!window.worklet_initialized) {
                 await audio_context.audioWorklet.addModule("./worklet.js");
                 window.worklet_initialized = true
             }
             this.node = new AudioWorkletNode(audio_context, 'string-processor');
-            this.node.connect(this.gain_node);
-        }
-        if(!this.node) {
+            this.node.connect(audio_context.destination);
         }
         
-        this.node.port.postMessage({overtones: this.overtones, duration: this.duration});
     }
-
+    
     this.play_sound = function() {
         this.playing = true;
         this.plucking = false;
-        //this.node.connect(this.gain_node);
-        //if(this.gain_node) this.gain_node.gain.setTargetAtTime(1, 0, 0.1);
+        if(this.node) this.node.port.postMessage({overtones: this.overtones, duration: this.duration});
     }
 
-    this.stop_sound = function(done) {
-        this.playing = false;
-
-        
-        if(this.gain_node) {
+    this.stop_sound = function() {
+        if(this.playing) {
             this.node.port.postMessage({stopped: true});
-            //this.gain_node.gain.setTargetAtTime(0, 0, 0.02);
-            let node = this.node;
-            setTimeout(() => {
-                //node.disconnect();
-                if(done) done()
-            }, 30)
+            this.playing = false;
         }
     }
-
-    
-    /*
-    this.getPluckY = function(time_diff, pluck_coordinates, sample_size, index) {
-        return "FIX THIS"
-        let offsetX = pluck_coordinates.x, offsetY = pluck_coordinates.y;
-        let pluck_index = Math.floor(pluck_coordinates.x * sample_size);
-
-        if(index<=pluck_index) {
-            start_y = 0;
-            end_y = offsetY
-            return start_y + end_y*(index/pluck_index);
-        } else {
-            start_y = offsetY;
-            end_y = 0;
-            return start_y*((sample_size-index)/(sample_size-pluck_index));
-        }
-    }
-    */
 
     return this;
 }

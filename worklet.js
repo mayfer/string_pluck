@@ -1,5 +1,5 @@
 
-class WhiteNoiseProcessor extends AudioWorkletProcessor {
+class StringProcessor extends AudioWorkletProcessor {
     constructor(...args) {
         super(...args);
         this.duration = 3;
@@ -9,12 +9,11 @@ class WhiteNoiseProcessor extends AudioWorkletProcessor {
         this.base_freq = 110;
         this.xs = []
         this.playing = false;
+        this.phase = Math.random()*Math.PI*2; // to avoid phase weirdness when plucked fast at first
 
         this.sampleRate = sampleRate;
-        console.log("sample rate", this.sampleRate)
 
         this.port.onmessage = (e) => {
-            //console.log(e.data)
             let { stopped, duration, overtones } = e.data;
             this.playing = !stopped;
 
@@ -29,7 +28,6 @@ class WhiteNoiseProcessor extends AudioWorkletProcessor {
                     return o
                 }))
             }
-            //this.duration = e.data.duration;
         }
     }
 
@@ -62,19 +60,18 @@ class WhiteNoiseProcessor extends AudioWorkletProcessor {
         let channels = outputs[0];
         
         
-        let phase = 0;
+        let phase = this.phase;
         let buffer_size = channels[0].length;
 
-
-
+        
         let currentTime = this.counter / this.sampleRate
         let percent_progress = Math.min(1, (currentTime) / this.duration);
         for (let j = 0; j < this.overtones.length; j++) {
             let overtone = this.overtones[j];
             
-            let adsr = Math.pow(1 - percent_progress, Math.max(1, 4*overtone.freq/this.base_freq)) / 20;
+            let adsr = Math.pow(1 - percent_progress, Math.max(1, 6*overtone.freq/this.base_freq)) / 10;
             let target_amplitude;
-
+            
             if(overtone.target_amplitude !== undefined) {
                 target_amplitude = overtone.target_amplitude * adsr;
                 if(overtone.amplitude == overtone.target_amplitude) {
@@ -86,53 +83,30 @@ class WhiteNoiseProcessor extends AudioWorkletProcessor {
             if(!overtone.smooth_amplitude) {
                 overtone.smooth_amplitude = 0;
             }
-
+            
             if(overtone.smooth_amplitude < target_amplitude) {
-                overtone.smooth_amplitude = Math.min(target_amplitude, overtone.smooth_amplitude + 0.005);
+                overtone.smooth_amplitude = Math.min(target_amplitude, overtone.smooth_amplitude + 0.008);
             } else if(overtone.smooth_amplitude > target_amplitude) {
-                overtone.smooth_amplitude = Math.max(target_amplitude, overtone.smooth_amplitude - 0.005);
+                overtone.smooth_amplitude = Math.max(target_amplitude, overtone.smooth_amplitude - 0.008);
             }
         }
         
         for (let i = 0; i < buffer_size; i++) {
             let cumulative_amplitude = 0;
 
-            // let anti_crackle = 1;
-            // if(this.stop_at) {
-            //     anti_crackle = Math.max(0, Math.min(1, (this.stop_at - this.counter) / this.stop_duration));
-            // }
-            // if(anti_crackle == 1 && this.queued_overtones) {
-            //     this.updateString(this.queued_overtones)
-            // }
-            
-            //let anti_crackle = this.counter < 1500 ? (this.counter / 1500) : 1;
-
-            if(true || this.playing) {
-                for (let j = 0; j < this.overtones.length; j++) {
-                    let overtone = this.overtones[j];
-                    
-                    // let ramp_duration_percentage = 0.001;
-                    // if(percent_progress <= ramp_duration_percentage) {
-                    //     adsr = (ramp_duration_percentage - percent_progress) / ramp_duration_percentage;
-                    // } else if(percent_progress <= ramp_duration_percentage*2) {
-                    //     adsr = (percent_progress - ramp_duration_percentage)/(ramp_duration_percentage*2);
-                    // } else {
-                    //     adsr = Math.pow(Math.pow(1 - percent_progress - ramp_duration_percentage*2, Math.max(1, overtone.freq/this.base_freq)), 2)
-                    // }
-                    
-                    // square env. amplitude to convert it to a logarithmic scale which better suits our perception
-                    
-                    // accumulate wave x axis radian vals for all tones
-                    if(this.xs[j] == undefined) {
-                        this.xs[j] = 0;
-                    }
-                    
-                    let y = Math.sin(this.xs[j] + phase);
-                    
-                    this.xs[j] += Math.PI * 2 * overtone.freq / this.sampleRate;
-                    
-                    cumulative_amplitude += (overtone.smooth_amplitude * y) / this.overtones.length;
+            for (let j = 0; j < this.overtones.length; j++) {
+                let overtone = this.overtones[j];
+                
+                // accumulate wave x axis radian vals for all tones
+                if(this.xs[j] == undefined) {
+                    this.xs[j] = 0;
                 }
+                
+                let y = Math.sin(this.xs[j] + phase);
+                
+                this.xs[j] = this.xs[j] + Math.PI * 2 * overtone.freq / this.sampleRate;
+                
+                cumulative_amplitude += (overtone.smooth_amplitude * y) / this.overtones.length;
             }
 
             for(let k = 0; k < channels.length; k++) {
@@ -143,4 +117,4 @@ class WhiteNoiseProcessor extends AudioWorkletProcessor {
         return true
     }
 }
-registerProcessor('string-processor', WhiteNoiseProcessor);
+registerProcessor('string-processor', StringProcessor);
