@@ -1,13 +1,24 @@
-
-class WhiteNoiseProcessor extends AudioWorkletProcessor {
+class StringProcessor extends AudioWorkletProcessor {
     constructor(...args) {
         super(...args);
-        this.strings = {};
-
-        this.main_counter = 0;
-
         this.sampleRate = sampleRate;
+        this.strings = {}
 
+        this.port.onmessage = (e) => {
+            let { stopped, duration, overtones } = e.data;
+            this.playing = !stopped;
+
+            if(duration) this.duration = duration / 1000;
+            
+            if(this.playing) {
+                this.updateString(overtones)
+            } else {
+                this.updateString(this.overtones.map(o => {
+                    o.amplitude = 0;
+                    return o
+                }))
+            }
+        }
         this.port.onmessage = (e) => {
             let string = e.data.string;
             let strings = e.data.strings || [string]
@@ -18,14 +29,21 @@ class WhiteNoiseProcessor extends AudioWorkletProcessor {
                         base_freq: string.overtones[0].freq,
                         duration: string.duration / 1000,
                         playing: string.playing,
-                        gain: 1 / Math.min(1, 1 / Math.max(...string.overtones.map(w => Math.abs(w.amplitude))))
+                        phase: Math.random()*Math.PI*2,
+                        counter: 0,
                     }
                 } else {
-                    if(string.overtones) {
-                        this.strings[string.id].overtones = string.overtones;
+                    if(string.stopped) {
+                        this.strings[string.id].overtones.forEach((overtone, i) => {
+                            this.strings[string.id].counter = 0
+                            this.strings[string.id].overtones[i].target_amplitude = 0;
+                        })
+                    } else if(string.overtones) {
+                        string.overtones.forEach((overtone, i) => {
+                            this.strings[string.id].overtones[i].target_amplitude = overtone.amplitude;
+                            this.strings[string.id].counter = 0
+                        })
                     }
-                    this.strings[string.id].playing = string.playing;
-                    this.strings[string.id].counter = 0;
                 }
             });
         }
@@ -33,58 +51,70 @@ class WhiteNoiseProcessor extends AudioWorkletProcessor {
 
     process(inputs, outputs, parameters) {
         let channels = outputs[0];
-        
-        
-        let phase = 0;
         let buffer_size = channels[0].length;
+        
 
         let strings_arr = Object.values(this.strings);
+
+        for(let s = 0; s < strings_arr.length; s++) {
+            let string = strings_arr[s];
+            let currentTime = string.counter / this.sampleRate
+            let percent_progress = Math.min(1, (currentTime) / string.duration);
+
+            for (let j = 0; j < string.overtones.length; j++) {
+                let overtone = string.overtones[j];
+                
+                let adsr = Math.pow(1 - percent_progress, Math.max(1, 6*overtone.freq/string.base_freq)) / 10;
+                let target_amplitude;
+                
+                if(overtone.target_amplitude !== undefined) {
+                    target_amplitude = overtone.target_amplitude * adsr;
+                    if(overtone.amplitude == overtone.target_amplitude) {
+                        overtone.target_amplitude = undefined;
+                    }
+                } else {
+                    target_amplitude = overtone.amplitude * adsr;
+                }
+
+                if(!overtone.smooth_amplitude) {
+                    overtone.smooth_amplitude = 0;
+                }
+
+                if(overtone.radians == undefined) {
+                    overtone.radians = 0;
+                }
+                
+                let ramp_percentage = 0.3 / (this.sampleRate / buffer_size)
+                if(overtone.smooth_amplitude < target_amplitude) {
+                    overtone.smooth_amplitude = Math.min(target_amplitude, overtone.smooth_amplitude + ramp_percentage);
+                } else if(overtone.smooth_amplitude > target_amplitude) {
+                    overtone.smooth_amplitude = Math.max(target_amplitude, overtone.smooth_amplitude - ramp_percentage);
+                }
+            }
+        }
         
         for (let i = 0; i < buffer_size; i++) {
             let cumulative_amplitude = 0;
-            
+
             for(let s = 0; s < strings_arr.length; s++) {
                 let string = strings_arr[s];
-                if(string.playing) {
-                    if(!string.counter) {
-                        string.counter = 0;
-                    }
-                    let overtones = string.overtones;
-                    let currentTime = string.counter / this.sampleRate
-                    let percent_progress = Math.min(1, (currentTime) / string.duration);
-                    let string_amplitude = 0;
-                    for (let j = 0; j < overtones.length; j++) {
-                        let overtone = overtones[j];
-                        
-                        let envelope_amplitude = overtone.amplitude * Math.pow(Math.pow(1 - percent_progress, Math.max(1, overtone.freq/string.base_freq)), 2);
-                        
-                        // square env. amplitude to convert it to a logarithmic scale which better suits our perception
-                        let current_amplitude = envelope_amplitude * envelope_amplitude * string.gain / 3;
-                        
-                        // accumulate wave x axis radian vals for all tones
-                        if(!overtone.xs) {
-                            overtone.xs = [];
-                        }
-                        if(overtone.xs[j] == undefined) {
-                            overtone.xs[j] = 0;
-                        }
-                        
-                        let y = Math.sin(overtone.xs[j] + phase);
-                        
-                        overtone.xs[j] += Math.PI * 2 * overtone.freq / this.sampleRate;
-                        
-                        string_amplitude += (current_amplitude * y) / overtones.length;
-                    }
-                    cumulative_amplitude += string_amplitude / strings_arr.length;
-                    string.counter += 1;
+                for (let j = 0; j < string.overtones.length; j++) {
+                    let overtone = string.overtones[j];
+                    
+                    let y = Math.sin(overtone.radians + string.phase);
+                    
+                    overtone.radians = overtone.radians + Math.PI * 2 * overtone.freq / this.sampleRate;
+                    
+                    cumulative_amplitude += (overtone.smooth_amplitude * y) / string.overtones.length;
                 }
+                string.counter += 1;
             }
+
             for(let k = 0; k < channels.length; k++) {
                 channels[k][i] = cumulative_amplitude;
             }
-            this.main_counter++;
         }
         return true
     }
 }
-registerProcessor('string-processor', WhiteNoiseProcessor);
+registerProcessor('string-processor', StringProcessor);
