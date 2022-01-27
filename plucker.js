@@ -112,7 +112,6 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
 
     this.set_pluck_offsets = function(offsetX, offsetY) {
         this.plucking = true;
-        this.playing = false;
         this.pluck_offset_x = offsetX;
         this.pluck_offset_y = offsetY;
 
@@ -168,6 +167,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     }
 
     this.pluck = function(offsetX, offsetY) {
+        this.plucking = false;
         let points = [];
         let count = 100;
         let relativeX = (offsetX - this.string_position.x);
@@ -189,9 +189,6 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         }
 
         this.start_time = Date.now();
-        this.playing = true;
-
-        var AudioContext = window.webkitAudioContext || window.AudioContext || false; 
 
         this.play_sound();
     }
@@ -217,7 +214,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
 
     this.stop_sound = function() {
         if(this.playing) {
-            this.node.port.postMessage({stopped: true});
+            if(this.node) this.node.port.postMessage({stopped: true});
             this.playing = false;
         }
     }

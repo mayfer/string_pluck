@@ -4,7 +4,6 @@ class StringProcessor extends AudioWorkletProcessor {
         super(...args);
         this.duration = 3;
         this.counter = 0;
-        this.gain = 1;
         this.overtones = [];
         this.base_freq = 110;
         this.xs = []
@@ -20,10 +19,9 @@ class StringProcessor extends AudioWorkletProcessor {
             if(duration) this.duration = duration / 1000;
             
             if(this.playing) {
-                this.queueStringUpdate(overtones)
+                this.updateString(overtones)
             } else {
-                this.stopped_at = this.counter;
-                this.queueStringUpdate(this.overtones.map(o => {
+                this.updateString(this.overtones.map(o => {
                     o.amplitude = 0;
                     return o
                 }))
@@ -31,7 +29,7 @@ class StringProcessor extends AudioWorkletProcessor {
         }
     }
 
-    queueStringUpdate(overtones) {
+    updateString(overtones) {
         if(this.overtones.length == overtones.length) {
 
             overtones.forEach((overtone, i) => {
@@ -39,21 +37,11 @@ class StringProcessor extends AudioWorkletProcessor {
             })
             this.counter = 0
         } else {
-            this.updateString(overtones)
+            this.counter = 0;
+            this.xs = [];
+            this.overtones = overtones;
+            this.base_freq = overtones[0].freq
         }
-    }
-
-    updateString(overtones) {
-        this.counter = 0;
-        this.xs = [];
-        this.overtones = overtones;
-        this.base_freq = overtones[0].freq
-
-        this.queued_overtones = null;
-        this.stop_at = null;
-
-        let max_amplitude = Math.max(...overtones.map(w => Math.abs(w.amplitude)));
-        this.gain = 1 / Math.min(1, 1 / max_amplitude);
     }
 
     process(inputs, outputs, parameters) {
@@ -66,6 +54,8 @@ class StringProcessor extends AudioWorkletProcessor {
         
         let currentTime = this.counter / this.sampleRate
         let percent_progress = Math.min(1, (currentTime) / this.duration);
+
+        let all_amplitudes_zero = true;
         for (let j = 0; j < this.overtones.length; j++) {
             let overtone = this.overtones[j];
             
@@ -82,15 +72,22 @@ class StringProcessor extends AudioWorkletProcessor {
             }
             if(!overtone.smooth_amplitude) {
                 overtone.smooth_amplitude = 0;
-            }
+            } else {
+                all_amplitudes_zero = false;
+            } 
             
+            let ramp_percentage = 0.3 / (this.sampleRate / buffer_size)
             if(overtone.smooth_amplitude < target_amplitude) {
-                overtone.smooth_amplitude = Math.min(target_amplitude, overtone.smooth_amplitude + 0.008);
+                overtone.smooth_amplitude = Math.min(target_amplitude, overtone.smooth_amplitude + ramp_percentage);
             } else if(overtone.smooth_amplitude > target_amplitude) {
-                overtone.smooth_amplitude = Math.max(target_amplitude, overtone.smooth_amplitude - 0.008);
+                overtone.smooth_amplitude = Math.max(target_amplitude, overtone.smooth_amplitude - ramp_percentage);
             }
         }
         
+        if(all_amplitudes_zero && this.xs.length > 0) {
+            this.xs = []
+        }
+
         for (let i = 0; i < buffer_size; i++) {
             let cumulative_amplitude = 0;
 

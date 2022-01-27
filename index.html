@@ -145,23 +145,19 @@
                     window.worklet_initialized = true
                 }
 
+                let auto_pluck_distance = 5;
 
                 $(document).on('mousedown touchstart', (e) => {
                     e.preventDefault();
                     let {offsetX, offsetY} = click_or_touch_coordinates(e);
                     prev_cursor = {x: offsetX, y: offsetY};
-                    let plucking = false;
+
                     strings.forEach(string => {
-                        string.plucking = false;
-                        if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - 5 && offsetY < string.string_position.y + 5) {
+                        if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - auto_pluck_distance && offsetY < string.string_position.y + auto_pluck_distance) {
                             string.set_pluck_offsets(offsetX, offsetY);
                             string.stop_sound()
-                            plucking = true;
                         }
                     });
-                    if(!plucking) {
-                        // draw string mode
-                    }
                     always_pluck = true;
                 })
 
@@ -180,19 +176,19 @@
                 })
 
                 let cursor_move_handler = function(offsetX, offsetY) {
-                    if(always_pluck) {
-                        strings.forEach(string => {
-                            if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - 5 && offsetY < string.string_position.y + 5) {
+                    strings.forEach(string => {
+                        if(always_pluck) {
+                            if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - auto_pluck_distance && offsetY < string.string_position.y + auto_pluck_distance) {
 
                                 string.set_pluck_offsets(offsetX, offsetY);
                                 string.stop_sound()
                             }
-                        });
-                    }
-                    strings.forEach(s => {
-                        if(s.plucking) {
-                            s.set_pluck_offsets(offsetX, offsetY)
                         }
+                        if(string.plucking) {
+                            string.set_pluck_offsets(offsetX, offsetY)
+                        }
+                    });
+                    strings.forEach(s => {
                     });
                 }
                 $(document).on('mousemove touchmove', (e) => {
