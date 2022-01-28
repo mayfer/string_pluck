@@ -49,7 +49,7 @@
                 // create a drawing area inside an element
                 var canvas_jq = new Canvas($('#draw'));
 
-                let duration = 4000;
+                let duration = 5000;
                 let string_y = 150;
                 
                 var overtone_freqs = [110, 220, 330, 440, 550, 660, 770, 880, 990, 1100, 1210, 1320, 1430, 1540, ];
@@ -73,10 +73,14 @@
                 //     });
                 // }
 
-                for(var i=0; i<72; i++) {
+                let num_strings = 24;
+                let width = canvas_jq.width();
+                let height = canvas_jq.height();
+                let width_55hz = Math.min(width - 100, 500)
+                for(var i=0; i<num_strings; i++) {
                     initial_strings.push({
-                        string_center: {x: canvas_jq.width()/2, y: 100 + (i+1) * 15},
-                        string_width: Notes.relative_note(440, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
+                        string_center: {x: width/2, y: 100 + (i+1) * ((height-200) / num_strings)},
+                        string_width: Notes.relative_note(width_55hz, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
                         angle: 0, // i * Math.PI / 64
                     });
                 }
@@ -84,13 +88,14 @@
                 window.audio_context = new AudioContext();
                 window.audio_context.audioWorklet.addModule("./worklet2.js").then(() => {
 
-                    let lowpass_filter = window.audio_context.createBiquadFilter();
-                    lowpass_filter.type = "lowpass";
-                    lowpass_filter.frequency.value = 800;
+                    //let lowpass_filter = window.audio_context.createBiquadFilter();
+                    //lowpass_filter.type = "lowpass";
+                    //lowpass_filter.frequency.value = 800;
 
                     let audio_node = new AudioWorkletNode(window.audio_context, 'string-processor');
-                    audio_node.connect(lowpass_filter);
-                    lowpass_filter.connect(window.audio_context.destination);
+                    audio_node.connect(window.audio_context.destination);
+                    //audio_node.connect(lowpass_filter);
+                    //lowpass_filter.connect(window.audio_context.destination);
 
 
                     let strings = [];
@@ -98,7 +103,7 @@
                     for(let string of initial_strings) {
                         var drawWave = new pluckableString({
                             canvas: canvas_jq.get(0),
-                            overtones: overtones.map((o, i) => { return {freq: parseInt(overtones[0].freq * 400/string.string_width) * (i+1), amplitude: o.amplitude } }),
+                            overtones: overtones.map((o, i) => { return {freq: parseInt(overtones[0].freq * width_55hz/string.string_width) * (i+1), amplitude: o.amplitude } }),
                             wave_height: 50,
                             string_width: string.string_width,
                             string_center: string.string_center,
