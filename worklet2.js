@@ -5,7 +5,7 @@ class StringProcessor extends AudioWorkletProcessor {
         this.strings = {}
 
         let amplitude_correction = (amp) => {
-            return Math.min(1, Math.abs(amp))
+            return Math.min(0.5, Math.abs(amp))
         }
 
 
@@ -22,7 +22,6 @@ class StringProcessor extends AudioWorkletProcessor {
                         counter: 0,
                     }
                     this.strings[string.id].overtones.forEach((overtone, i) => {
-                        this.strings[string.id].overtones[i].target_amplitude = amplitude_correction(overtone.amplitude);
                         this.strings[string.id].overtones[i].amplitude = amplitude_correction(overtone.amplitude);
                     })
                 } else {
@@ -77,7 +76,7 @@ class StringProcessor extends AudioWorkletProcessor {
                     overtone.radians = 0;
                 }
                 
-                let ramp_percentage = 10 / (this.sampleRate / buffer_size)
+                let ramp_percentage = (buffer_size / this.sampleRate) * 30;
                 if(overtone.smooth_amplitude < target_amplitude) {
                     overtone.smooth_amplitude = Math.min(target_amplitude, overtone.smooth_amplitude + ramp_percentage);
                 } else if(overtone.smooth_amplitude > target_amplitude) {

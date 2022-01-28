@@ -10,6 +10,7 @@
         <script type='text/javascript' src='draw.js'></script>
         <script type='text/javascript' src='notes.js'></script>
         <script type='text/javascript' src='plucker2.js'></script>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
             html, body { margin: 0; padding: 0; background: black; height:  100%; }
             .container { height: 100%; margin: 0 auto; 
@@ -72,7 +73,7 @@
                 //     });
                 // }
 
-                for(var i=0; i<72; i++) {
+                for(var i=0; i<24; i++) {
                     initial_strings.push({
                         string_center: {x: canvas_jq.width()/2, y: 100 + (i+1) * 15},
                         string_width: Notes.relative_note(440, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
@@ -83,8 +84,13 @@
                 window.audio_context = new AudioContext();
                 window.audio_context.audioWorklet.addModule("./worklet2.js").then(() => {
 
+                    let lowpass_filter = window.audio_context.createBiquadFilter();
+                    lowpass_filter.type = "lowpass";
+                    lowpass_filter.frequency.setValueAtTime(1500, 0);
                     let audio_node = new AudioWorkletNode(window.audio_context, 'string-processor');
-                    audio_node.connect(window.audio_context.destination);
+                    audio_node.connect(lowpass_filter);
+                    lowpass_filter.connect(window.audio_context.destination);
+
 
                     let strings = [];
 
