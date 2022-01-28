@@ -2,7 +2,7 @@ X_INCREMENT = 5;
 
 let auto_increment = 1;
 
-function pluckableString({canvas, overtones, wave_height, string_width, string_center, angle, duration, node}) {
+function pluckableString({canvas, overtones, wave_height, string_width, string_center, angle, duration, node, string_slack}) {
     this.node = node;
     this.overtones = overtones; // {freq, amplitude}
     this.id = auto_increment++;
@@ -22,7 +22,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     this.string_height = wave_height;
 
     this.base_freq = overtones[0].freq;
-    this.string_slack = 30;
+    this.string_slack = string_slack || 30;
 
     this.playing = false;
 

@@ -57,15 +57,14 @@ class StringProcessor extends AudioWorkletProcessor {
                 let overtone = string.overtones[j];
                 
                 let adsr = Math.pow(1 - percent_progress, Math.max(1, 4*overtone.freq/string.base_freq));
-                let target_amplitude;
                 
                 if(overtone.target_amplitude !== undefined) {
-                    target_amplitude = overtone.target_amplitude * adsr;
+                    overtone.ramp_to_amplitude = overtone.target_amplitude * adsr;
                     if(overtone.amplitude == overtone.target_amplitude) {
                         overtone.target_amplitude = undefined;
                     }
                 } else {
-                    target_amplitude = overtone.amplitude * adsr;
+                    overtone.ramp_to_amplitude = overtone.amplitude * adsr;
                 }
 
                 if(!overtone.smooth_amplitude) {
@@ -79,15 +78,10 @@ class StringProcessor extends AudioWorkletProcessor {
                     overtone.radians_per_sample = Math.PI * 2 * overtone.freq / this.sampleRate;
                 }
                 
-                let ramp_percentage = (buffer_size / this.sampleRate) * overtone.freq / 30
-                if(overtone.smooth_amplitude < target_amplitude) {
-                    overtone.smooth_amplitude = Math.min(target_amplitude, overtone.smooth_amplitude + ramp_percentage);
-                } else if(overtone.smooth_amplitude > target_amplitude) {
-                    overtone.smooth_amplitude = Math.max(target_amplitude, overtone.smooth_amplitude - ramp_percentage);
-                }
             }
         }
 
+        let ramp_percentage = (1 / (this.sampleRate/100));
         
         for (let i = 0; i < buffer_size; i++) {
             let cumulative_amplitude = 0;
@@ -97,6 +91,13 @@ class StringProcessor extends AudioWorkletProcessor {
 
                 for (let j = 0; j < string.overtones.length; j++) {
                     let overtone = string.overtones[j];
+
+
+                    if(overtone.smooth_amplitude < overtone.ramp_to_amplitude) {
+                        overtone.smooth_amplitude = Math.min(overtone.ramp_to_amplitude, overtone.smooth_amplitude + ramp_percentage);
+                    } else if(overtone.smooth_amplitude > overtone.ramp_to_amplitude) {
+                        overtone.smooth_amplitude = Math.max(overtone.ramp_to_amplitude, overtone.smooth_amplitude - ramp_percentage);
+                    }
                     
                     let y = Math.sin(overtone.radians + string.phase);
                     

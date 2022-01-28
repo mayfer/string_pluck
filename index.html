@@ -73,7 +73,7 @@
                 //     });
                 // }
 
-                let num_strings = 24;
+                let num_strings = 72;
                 let width = canvas_jq.width();
                 let height = canvas_jq.height();
                 let width_55hz = Math.min(width - 100, 500)
@@ -110,6 +110,7 @@
                             angle: string.angle,
                             duration,
                             node: audio_node,
+                            string_slack: Math.min(30, string.string_width/5),
                         })
                         strings.push(drawWave);
                     }
