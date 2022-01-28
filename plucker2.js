@@ -37,6 +37,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
             }
             freqs[freq] = resonance;
         }
+        //console.log(Object.keys(freqs).map(f => `${f}hz: ${freqs[f]}`).join("\n"));
         return freqs;
     }
 
@@ -195,6 +196,10 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         this.play_sound();
     }
 
+    this.post_message_to_worklet = function(message) {
+        this.node.port.postMessage(JSON.parse(JSON.stringify(message)));
+    }
+
     this.sync_worklet = function() {
         let audio_context = window.audio_context;
         if(audio_context.state === 'suspended') {
@@ -202,7 +207,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         }
         if(this.node) {
             if(this.playing) {
-                this.node.port.postMessage({
+                this.post_message_to_worklet({
                     string: {
                         id: this.id,
                         overtones: this.overtones,
@@ -210,7 +215,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
                     },
                 });
             } else {
-                this.node.port.postMessage({
+                this.post_message_to_worklet({
                     string: {
                         id: this.id,
                         stopped: !this.playing,

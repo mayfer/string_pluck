@@ -73,7 +73,7 @@ class StringProcessor extends AudioWorkletProcessor {
                     overtone.smooth_amplitude = 0;
                 }
 
-                if(overtone.radians == undefined) {
+                if(overtone.radians === undefined) {
                     overtone.radians = 0;
                 }
                 
