@@ -1,115 +1,115 @@
-
 class StringProcessor extends AudioWorkletProcessor {
     constructor(...args) {
         super(...args);
-        this.duration = 3;
-        this.counter = 0;
-        this.overtones = [];
-        this.base_freq = 110;
-        this.xs = []
-        this.playing = false;
-        this.phase = Math.random()*Math.PI*2; // to avoid phase weirdness when plucked fast at first
-
         this.sampleRate = sampleRate;
+        this.strings = {}
+
+        let amplitude_correction = (amp) => {
+            return Math.min(1, Math.abs(amp))
+        }
+
 
         this.port.onmessage = (e) => {
-            let { stopped, duration, overtones } = e.data;
-            this.playing = !stopped;
-
-            if(duration) this.duration = duration / 1000;
-            
-            if(this.playing) {
-                this.updateString(overtones)
-            } else {
-                this.updateString(this.overtones.map(o => {
-                    o.amplitude = 0;
-                    return o
-                }))
-            }
-        }
-    }
-
-    updateString(overtones) {
-        if(this.overtones.length == overtones.length) {
-
-            overtones.forEach((overtone, i) => {
-                this.overtones[i].target_amplitude = overtone.amplitude;
-            })
-            this.counter = 0
-        } else {
-            this.counter = 0;
-            this.xs = [];
-            this.overtones = overtones;
-            this.base_freq = overtones[0].freq
+            let string = e.data.string;
+            let strings = e.data.strings || [string]
+            strings.forEach(string => {
+                if(!this.strings[string.id]) {
+                    this.strings[string.id] = {
+                        overtones: string.overtones,
+                        base_freq: string.overtones[0].freq,
+                        duration: string.duration / 1000,
+                        phase: Math.random()*Math.PI*2,
+                        counter: 0,
+                    }
+                    this.strings[string.id].overtones.forEach((overtone, i) => {
+                        this.strings[string.id].overtones[i].amplitude = amplitude_correction(overtone.amplitude);
+                    })
+                } else {
+                    if(string.stopped) {
+                        this.strings[string.id].overtones.forEach((overtone, i) => {
+                            this.strings[string.id].counter = 0
+                            this.strings[string.id].overtones[i].target_amplitude = 0;
+                        })
+                    } else if(string.overtones) {
+                        string.overtones.forEach((overtone, i) => {
+                            this.strings[string.id].counter = 0
+                            this.strings[string.id].overtones[i].target_amplitude = amplitude_correction(overtone.amplitude);
+                        })
+                    }
+                }
+            });
         }
     }
 
     process(inputs, outputs, parameters) {
         let channels = outputs[0];
-        
-        
-        let phase = this.phase;
         let buffer_size = channels[0].length;
-
         
-        let currentTime = this.counter / this.sampleRate
-        let percent_progress = Math.min(1, (currentTime) / this.duration);
 
-        let all_amplitudes_zero = true;
-        for (let j = 0; j < this.overtones.length; j++) {
-            let overtone = this.overtones[j];
-            
-            let adsr = Math.pow(1 - percent_progress, Math.max(1, 6*overtone.freq/this.base_freq)) / 10;
-            let target_amplitude;
-            
-            if(overtone.target_amplitude !== undefined) {
-                target_amplitude = overtone.target_amplitude * adsr;
-                if(overtone.amplitude == overtone.target_amplitude) {
-                    overtone.target_amplitude = undefined;
+        let strings_arr = Object.values(this.strings);
+
+        for(let s = 0; s < strings_arr.length; s++) {
+            let string = strings_arr[s];
+            let currentTime = string.counter / this.sampleRate
+            let percent_progress = Math.min(1, (currentTime) / string.duration);
+
+            for (let j = 0; j < string.overtones.length; j++) {
+                let overtone = string.overtones[j];
+                
+                let adsr = Math.pow(1 - percent_progress, Math.max(1, 4*overtone.freq/string.base_freq));
+                let target_amplitude;
+                
+                if(overtone.target_amplitude !== undefined) {
+                    target_amplitude = overtone.target_amplitude * adsr;
+                    if(overtone.amplitude == overtone.target_amplitude) {
+                        overtone.target_amplitude = undefined;
+                    }
+                } else {
+                    target_amplitude = overtone.amplitude * adsr;
                 }
-            } else {
-                target_amplitude = overtone.amplitude * adsr;
+
+                if(!overtone.smooth_amplitude) {
+                    overtone.smooth_amplitude = 0;
+                }
+
+                if(overtone.radians === undefined) {
+                    overtone.radians = 0;
+                }
+                if(overtone.radians_per_sample === undefined) {
+                    overtone.radians_per_sample = Math.PI * 2 * overtone.freq / this.sampleRate;
+                }
+                
+                let ramp_percentage = (buffer_size / this.sampleRate) * overtone.freq / 30
+                if(overtone.smooth_amplitude < target_amplitude) {
+                    overtone.smooth_amplitude = Math.min(target_amplitude, overtone.smooth_amplitude + ramp_percentage);
+                } else if(overtone.smooth_amplitude > target_amplitude) {
+                    overtone.smooth_amplitude = Math.max(target_amplitude, overtone.smooth_amplitude - ramp_percentage);
+                }
             }
-            if(!overtone.smooth_amplitude) {
-                overtone.smooth_amplitude = 0;
-            } else {
-                all_amplitudes_zero = false;
-            } 
-            
-            let ramp_percentage = 0.3 / (this.sampleRate / buffer_size)
-            if(overtone.smooth_amplitude < target_amplitude) {
-                overtone.smooth_amplitude = Math.min(target_amplitude, overtone.smooth_amplitude + ramp_percentage);
-            } else if(overtone.smooth_amplitude > target_amplitude) {
-                overtone.smooth_amplitude = Math.max(target_amplitude, overtone.smooth_amplitude - ramp_percentage);
-            }
-        }
-        
-        if(all_amplitudes_zero && this.xs.length > 0) {
-            this.xs = []
         }
 
+        
         for (let i = 0; i < buffer_size; i++) {
             let cumulative_amplitude = 0;
+            
+            for(let s = 0; s < strings_arr.length; s++) {
+                let string = strings_arr[s];
 
-            for (let j = 0; j < this.overtones.length; j++) {
-                let overtone = this.overtones[j];
-                
-                // accumulate wave x axis radian vals for all tones
-                if(this.xs[j] == undefined) {
-                    this.xs[j] = 0;
+                for (let j = 0; j < string.overtones.length; j++) {
+                    let overtone = string.overtones[j];
+                    
+                    let y = Math.sin(overtone.radians + string.phase);
+                    
+                    overtone.radians += overtone.radians_per_sample;
+                    
+                    cumulative_amplitude += (overtone.smooth_amplitude * y) / string.overtones.length;
                 }
-                
-                let y = Math.sin(this.xs[j] + phase);
-                
-                this.xs[j] = this.xs[j] + Math.PI * 2 * overtone.freq / this.sampleRate;
-                
-                cumulative_amplitude += (overtone.smooth_amplitude * y) / this.overtones.length;
+                string.counter += 1;
             }
 
             for(let k = 0; k < channels.length; k++) {
-                channels[k][i] = cumulative_amplitude;
+                channels[k][i] = Math.min(1, Math.max(-1, cumulative_amplitude));
             }
-            this.counter += 1;
         }
         return true
     }

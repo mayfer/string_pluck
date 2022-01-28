@@ -2,8 +2,7 @@ X_INCREMENT = 5;
 
 let auto_increment = 1;
 
-function pluckableString({canvas, overtones, wave_height, string_width, string_center, angle, duration, node}) {
-    this.node = node;
+function pluckableString({canvas, overtones, wave_height, string_width, string_center, angle, duration}) {
     this.overtones = overtones; // {freq, amplitude}
     this.id = auto_increment++;
 
@@ -37,7 +36,6 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
             }
             freqs[freq] = resonance;
         }
-        //console.log(Object.keys(freqs).map(f => `${f}hz: ${freqs[f]}`).join("\n"));
         return freqs;
     }
 
@@ -55,7 +53,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         let standing = Math.PI / this.string_width;
         let relative_freq = standing * freq / this.base_freq;
         
-        let speed_adjustment = Math.max(1, Math.sqrt(this.overtones[0].freq / 220)) * (freq / this.base_freq) / 15;
+        let speed_adjustment = (freq / this.base_freq) / 25;
         
         let phase = 0;
         
@@ -195,45 +193,29 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         this.play_sound();
     }
 
-    this.post_message_to_worklet = function(message) {
-        this.node.port.postMessage(JSON.parse(JSON.stringify(message)));
-    }
-
-    this.sync_worklet = function() {
+    this.setup_audio = function() {
         let audio_context = window.audio_context;
         if(audio_context.state === 'suspended') {
             audio_context.resume();
         }
-        if(this.node) {
-            if(this.playing) {
-                this.post_message_to_worklet({
-                    string: {
-                        id: this.id,
-                        overtones: this.overtones,
-                        duration: this.duration
-                    },
-                });
-            } else {
-                this.post_message_to_worklet({
-                    string: {
-                        id: this.id,
-                        stopped: !this.playing,
-                    },
-                });
-            }
+        if(!this.node) {
+            this.node = new AudioWorkletNode(audio_context, 'string-processor');
+            this.node.connect(audio_context.destination);
         }
+        
     }
     
     this.play_sound = function() {
+        this.setup_audio();
         this.playing = true;
         this.plucking = false;
-        this.sync_worklet();
+        if(this.node) this.node.port.postMessage({overtones: this.overtones, duration: this.duration});
     }
 
     this.stop_sound = function() {
         if(this.playing) {
+            if(this.node) this.node.port.postMessage({stopped: true});
             this.playing = false;
-            this.sync_worklet();
         }
     }
 
