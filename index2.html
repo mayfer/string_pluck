@@ -73,7 +73,7 @@
                 //     });
                 // }
 
-                for(var i=0; i<24; i++) {
+                for(var i=0; i<72; i++) {
                     initial_strings.push({
                         string_center: {x: canvas_jq.width()/2, y: 100 + (i+1) * 15},
                         string_width: Notes.relative_note(440, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
@@ -86,7 +86,8 @@
 
                     let lowpass_filter = window.audio_context.createBiquadFilter();
                     lowpass_filter.type = "lowpass";
-                    lowpass_filter.frequency.setValueAtTime(1500, 0);
+                    lowpass_filter.frequency.value = 800;
+
                     let audio_node = new AudioWorkletNode(window.audio_context, 'string-processor');
                     audio_node.connect(lowpass_filter);
                     lowpass_filter.connect(window.audio_context.destination);

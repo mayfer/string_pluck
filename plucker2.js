@@ -55,8 +55,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         let standing = Math.PI / this.string_width;
         let relative_freq = standing * freq / this.base_freq;
         
-        let freq_related_speed = (freq/110)/100;
-        let speed_adjustment = (freq / this.base_freq) / 25;
+        let speed_adjustment = Math.max(1, Math.sqrt(200 / this.string_width)) * (freq / this.base_freq) / 15;
         
         let phase = 0;
         
