@@ -25,7 +25,6 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     this.string_slack = 30;
 
     this.playing = false;
-    console.log("hello")
 
     this.fourier = function(points) {
         let freqs = {};
@@ -55,6 +54,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         let standing = Math.PI / this.string_width;
         let relative_freq = standing * freq / this.base_freq;
         
+        let freq_related_speed = (freq/110)/100;
         let speed_adjustment = (freq / this.base_freq) / 25;
         
         let phase = 0;
