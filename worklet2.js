@@ -4,6 +4,11 @@ class StringProcessor extends AudioWorkletProcessor {
         this.sampleRate = sampleRate;
         this.strings = {}
 
+        let amplitude_correction = (amp) => {
+            return Math.min(1, Math.abs(amp))
+        }
+
+
         this.port.onmessage = (e) => {
             let string = e.data.string;
             let strings = e.data.strings || [string]
@@ -16,6 +21,10 @@ class StringProcessor extends AudioWorkletProcessor {
                         phase: Math.random()*Math.PI*2,
                         counter: 0,
                     }
+                    this.strings[string.id].overtones.forEach((overtone, i) => {
+                        this.strings[string.id].overtones[i].target_amplitude = amplitude_correction(overtone.amplitude);
+                        this.strings[string.id].overtones[i].amplitude = amplitude_correction(overtone.amplitude);
+                    })
                 } else {
                     if(string.stopped) {
                         this.strings[string.id].overtones.forEach((overtone, i) => {
@@ -25,7 +34,7 @@ class StringProcessor extends AudioWorkletProcessor {
                     } else if(string.overtones) {
                         string.overtones.forEach((overtone, i) => {
                             this.strings[string.id].counter = 0
-                            this.strings[string.id].overtones[i].target_amplitude = overtone.amplitude;
+                            this.strings[string.id].overtones[i].target_amplitude = amplitude_correction(overtone.amplitude);
                         })
                     }
                 }
@@ -48,7 +57,7 @@ class StringProcessor extends AudioWorkletProcessor {
             for (let j = 0; j < string.overtones.length; j++) {
                 let overtone = string.overtones[j];
                 
-                let adsr = Math.pow(1 - percent_progress, Math.max(1, 4*overtone.freq/string.base_freq)) / 5;
+                let adsr = Math.pow(1 - percent_progress, Math.max(1, 4*overtone.freq/string.base_freq));
                 let target_amplitude;
                 
                 if(overtone.target_amplitude !== undefined) {
