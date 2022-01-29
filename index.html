@@ -85,7 +85,7 @@
                     });
                 }
 
-                window.audio_context = new AudioContext();
+                window.audio_context = new AudioContext({sampleRate: 44100});
                 window.audio_context.audioWorklet.addModule("./worklet.js").then(() => {
 
                     //let lowpass_filter = window.audio_context.createBiquadFilter();
