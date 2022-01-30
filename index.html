@@ -74,7 +74,7 @@
                 //     });
                 // }
 
-                let num_strings = 64;
+                let num_strings = 72;
                 let width = canvas_jq.width();
                 let height = canvas_jq.height();
                 let width_55hz = Math.min(width - 100, 500)
@@ -83,7 +83,7 @@
                     initial_strings.push({
                         string_center: {x: width/2, y: 100 + (i+1) * ((height-200) / num_strings)},
                         //string_width: Notes.relative_note(width_55hz, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
-                        string_width: Notes.relative_note(width_55hz, -i),
+                        string_width: Notes.relative_note(width_55hz*2, -i),
                         angle: 0, // i * Math.PI / 64
                         midi_number: midi_number_a1 + i,
                     });
@@ -155,7 +155,7 @@
                         if(time_diff >= note_time) {
                             let note = notes[note_index];
                             let string = midi_string_map[note.midi];
-                            if(string) {
+                            if(string && document.hasFocus()) {
                                 string.auto_pluck();
                             }
                             note_index++;

@@ -69,8 +69,8 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
 
     this.draw_still = function() {
         let context = this.context;
+        context.strokeStyle = "rgba(255, 255, 255, 0.1)"
         context.save();
-        context.strokeStyle = "#555"
         context.translate(this.string_center.x, this.string_center.y);
         context.rotate(this.angle);
         context.translate(-this.string_center.x, -this.string_center.y);
@@ -83,9 +83,18 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         context.restore();
     }
     this.draw = function() {
-        this.time_diff = this.start_time ? Date.now() - this.start_time : 0;
+        this.time_diff = Math.min(this.duration, this.start_time ? Date.now() - this.start_time : 0);
+
+        // if(this.time_diff > this.duration ) {
+        //     this.playing = false;
+        //     this.draw_still();
+        //     return;
+        // }
         let context = this.context;
         context.save();
+        let brightness = 0.1 + Math.pow((this.duration - this.time_diff)/this.duration, 10)
+        brightness = Math.max(0, Math.min(1, brightness));
+        context.strokeStyle = "rgba(255, 255, 255, "+brightness+")"
         context.translate(this.string_center.x, this.string_center.y);
         context.rotate(this.angle);
         context.translate(-this.string_center.x, -this.string_center.y);
@@ -117,6 +126,14 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         this.plucking = true;
         this.pluck_offset_x = offsetX;
         this.pluck_offset_y = offsetY;
+
+        let context = this.context;
+        context.save();
+        context.fillStyle = "#fff"
+        context.beginPath();
+        context.arc(offsetX, offsetY, 10, 0, 2 * Math.PI, false);
+        context.fill();
+        context.restore();
 
         if(Math.abs(offsetY - this.string_position.y) > this.string_slack || offsetX < this.string_position.x || offsetX > this.string_position.x + this.string_width) {
             this.pluck(this.pluck_offset_x, this.pluck_offset_y);
