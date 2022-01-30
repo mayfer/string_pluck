@@ -166,7 +166,11 @@
                         }
                     }
 
-                    frame();
+                    $("#start-button").one('mousedown touchstart', function() {
+                        window.audio_context.resume();
+                        frame();
+                        $(this).remove()
+                    })
 
 
                     function click_or_touch_coordinates(e) {
@@ -196,7 +200,6 @@
 
                     $(document).on('mousedown touchstart', (e) => {
                         e.preventDefault();
-                        e.stopPropagation();
                         let {offsetX, offsetY} = click_or_touch_coordinates(e);
                         prev_cursor = {x: offsetX, y: offsetY};
 
@@ -265,7 +268,7 @@
     <body>
         <div class='container'>
             <div id='draw'> </div>
-
+            <div id="start-button">Start audio</div>
         </div>
     </body>
 </html>
