@@ -22,7 +22,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     this.string_height = wave_height;
 
     this.base_freq = overtones[0].freq;
-    this.string_slack = string_slack || 30;
+    this.string_slack = string_slack ||  30;
 
     this.playing = false;
 
@@ -44,7 +44,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     this.autoEnvelopeValue = function(overtone, time_diff) {
         let percent_progress = Math.min(1, time_diff / this.duration);
         let { freq, amplitude } = overtone;
-        let auto = amplitude * Math.pow(Math.pow(1 - percent_progress, freq/this.base_freq), 2)
+        let auto = amplitude * Math.pow(1 - percent_progress, 2*freq/this.base_freq);
 
         return auto;
     }
@@ -70,6 +70,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     this.draw_still = function() {
         let context = this.context;
         context.save();
+        context.strokeStyle = "#555"
         context.translate(this.string_center.x, this.string_center.y);
         context.rotate(this.angle);
         context.translate(-this.string_center.x, -this.string_center.y);
@@ -166,6 +167,13 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
                 points[i] = start_y*((count-i)/(count-pluck_index));
             }
         }
+    }
+
+    this.auto_pluck = function() {
+        let offsetX = this.string_center.x + (Math.random() * 2 - 1)*this.string_width/2;
+        let offsetY = this.string_center.y + this.string_slack/2;
+        this.set_pluck_offsets(offsetX, offsetY);
+        this.pluck(offsetX, offsetY);
     }
 
     this.pluck = function(offsetX, offsetY) {

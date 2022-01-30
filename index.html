@@ -10,6 +10,7 @@
         <script type='text/javascript' src='draw.js'></script>
         <script type='text/javascript' src='notes.js'></script>
         <script type='text/javascript' src='plucker.js'></script>
+        <script type='text/javascript' src='chopin.js'></script>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
             html, body { margin: 0; padding: 0; background: black; height:  100%; }
@@ -52,7 +53,7 @@
                 let duration = 5000;
                 let string_y = 150;
                 
-                var overtone_freqs = [110, 220, 330, 440, 550, 660, 770, 880, 990, 1100, 1210, 1320, 1430, 1540, ];
+                var overtone_freqs = [110, 220, 330, 440, 550, 660, 770, 880, 990,]// 1100, 1210, 1320, 1430, 1540, ];
                 var overtones = overtone_freqs.map(freq => { return {freq, amplitude: 1} });
 
 
@@ -73,15 +74,18 @@
                 //     });
                 // }
 
-                let num_strings = 72;
+                let num_strings = 64;
                 let width = canvas_jq.width();
                 let height = canvas_jq.height();
                 let width_55hz = Math.min(width - 100, 500)
+                let midi_number_a1 = 33;
                 for(var i=0; i<num_strings; i++) {
                     initial_strings.push({
                         string_center: {x: width/2, y: 100 + (i+1) * ((height-200) / num_strings)},
-                        string_width: Notes.relative_note(width_55hz, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
+                        //string_width: Notes.relative_note(width_55hz, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
+                        string_width: Notes.relative_note(width_55hz, -i),
                         angle: 0, // i * Math.PI / 64
+                        midi_number: midi_number_a1 + i,
                     });
                 }
 
@@ -99,6 +103,7 @@
 
 
                     let strings = [];
+                    let midi_string_map = {};
 
                     for(let string of initial_strings) {
                         var drawWave = new pluckableString({
@@ -110,9 +115,10 @@
                             angle: string.angle,
                             duration,
                             node: audio_node,
-                            string_slack: Math.min(30, string.string_width/5),
+                            string_slack: Math.max(5, Math.min(30, string.string_width/5)),
                         })
                         strings.push(drawWave);
+                        midi_string_map[string.midi_number] = drawWave;
                     }
 
                     var canvas = canvas_jq.get(0);
@@ -128,18 +134,40 @@
                     }
                     init()
 
+                    let start;
+                    let note_index = 0;
+                    let notes = chopin.tracks[0].notes;
+
                     let frame = () => {
                         context.fillRect(0, 0, context.width, context.height);
-                        //let time_diff = Date.now()-start;
                         strings.forEach(s => {
                             if(s.playing) s.draw()
                             else if(s.plucking) s.draw_pluck();
                             else s.draw_still();
                         });
                         requestAnimationFrame(frame)
+
+                        if(!start) {
+                            start = Date.now();
+                        }
+                        let time_diff = Date.now()-start;
+                        let note_time = notes[note_index].time * 1200;
+                        if(time_diff >= note_time) {
+                            let note = notes[note_index];
+                            let string = midi_string_map[note.midi];
+                            if(string) {
+                                string.auto_pluck();
+                            }
+                            note_index++;
+                            if(note_index >= notes.length) {
+                                note_index = 0;
+                                start = Date.now()
+                            }
+                        }
                     }
 
                     frame();
+
 
                     function click_or_touch_coordinates(e) {
                         if(e.type == 'touchstart' || e.type == 'touchmove' || e.type == 'touchend' || e.type == 'touchcancel'){
