@@ -77,20 +77,27 @@
   
   vec2 mainSound(float time) {
     float sum = 0.0;
-    float amp = 1.0 / 200.0;
+    
+    int num_strings = 1300;
+    float num_strings_f = float(num_strings);
+    int num_overtones = 15;
+    float num_overtones_f = float(num_overtones);
+
+    float amp = 1.0 / (num_strings_f * num_overtones_f);
     float freq;
     float ofreq;
     float ttime = time;
 
-    for (int i = 0; i < 200; i++) {
+    for (int i = 0; i < num_strings; i++) {
         ttime -= 0.01;
         float ii = float(i);
         freq = u_freq;
-        ofreq = exp(log(freq) + 0.05776226 * ii);
-        for(freq = ofreq ; freq <= ofreq * 15.0; freq += ofreq){
+        ofreq = exp(log(freq*(ii+1.0)) + 0.05776226 * ii);
+
+        for(freq = ofreq ; freq <= ofreq * num_overtones_f; freq += ofreq){
             if(ttime > 0.0) {
-                float damp = amp * pow(pow(1.0 - (ttime/10.0), freq/ofreq), 2.0);
-                if(damp > 0.001) {
+                float damp = amp * pow(1.0 - (ttime/10.0), 4.0*freq/ofreq);
+                if(damp > 0.00001) {
                     sum += sine(freq, time) * damp;
                 }
             }
@@ -116,7 +123,7 @@
         audioCtx = new AudioContext();
         freq = parseFloat(freq)
         const DURATION = 3; // seconds
-        const WIDTH = 256;
+        const WIDTH = 1024;
         const HEIGHT = 1;
 
         //const audioBuffer = audioCtx.createBuffer(2, 1024, audioCtx.sampleRate);
@@ -171,7 +178,7 @@
 
     const startButton = document.getElementById('startButton');
     const elapsedTime = document.getElementById('elapsedTime')
-    let freq = 110
+    let freq = 55
     startButton.addEventListener('click', _ => {
         const startTime = performance.now();
         const node = createAudio(freq);
