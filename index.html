@@ -21,8 +21,10 @@
     align-items: center;     /* center items horizontally, in this case */}
             #draw { width: 100%; height: 100%; }
             #save { margin: 10px; font-size: 20px; line-height: 25px; }
-            #start-button { position: absolute; height: 100px; line-height: 100px; font-size: 40px; cursor: pointer; width: 300px; text-align: center; background: #fff; color: #000; top: 50%; left: 50%; transform: translate(-50%, -50%); }
-            #start-button:hover { background: #aaa; }
+
+            #buttons { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: row; justify-content: center; align-items: center; }
+            .button  { height: 100px; line-height: 100px; font-size: 40px; cursor: pointer; width: 300px; text-align: center; background: #ddd; color: #000; margin: 10px; }
+            .button:hover { background: #fff; }
         </style>
         <script type='text/javascript'>
             jQuery.event.special.touchstart = {
@@ -53,7 +55,7 @@
                 let duration = 5000;
                 let string_y = 150;
                 
-                var overtone_freqs = [110, 220, 330, 440, 550, 660, 770, 880, 990,]// 1100, 1210, 1320, 1430, 1540, ];
+                var overtone_freqs = Array.from({length: 14}, (_, i) => (i+1) * 110);
                 var overtones = overtone_freqs.map(freq => { return {freq, amplitude: 1} });
 
 
@@ -74,7 +76,7 @@
                 //     });
                 // }
 
-                let num_strings = 72;
+                let num_strings = 70;
                 let width = canvas_jq.width();
                 let height = canvas_jq.height();
                 let width_55hz = Math.min(width - 100, 500)
@@ -136,7 +138,23 @@
 
                     let start;
                     let note_index = 0;
+                    let pluck_index = 0;
                     let notes = chopin.tracks[0].notes;
+                    window.pause = true
+
+                    let speed = 0.8
+                    let pluck_duration = 200;
+                    let one_sec_ms = 1000 * (1/speed);
+
+                    let notes_map = {}
+                    let notes_map_cursors = {}
+                    notes.forEach(note => {
+                        if(!notes_map[note.midi]) {
+                            notes_map[note.midi] = [];
+                            notes_map_cursors[note.midi] = 0;
+                        }
+                        notes_map[note.midi].push(note);
+                    })
 
                     let frame = () => {
                         context.fillRect(0, 0, context.width, context.height);
@@ -151,25 +169,55 @@
                             start = Date.now();
                         }
                         let time_diff = Date.now()-start;
-                        let note_time = notes[note_index].time * 1200;
-                        if(time_diff >= note_time) {
+
+                        // if(!document.hasFocus()) {
+                        //     window.pause = true;
+                        // }
+                        if(!window.pause) {
+                            Object.keys(notes_map_cursors).forEach(midi_num => {
+                                let cursor = notes_map_cursors[midi_num];
+                                let note = notes_map[midi_num][cursor];
+                                if(note) {
+                                    let plucking_string = midi_string_map[note.midi]
+                                    let pluck_time = Math.max((plucking_string.prev_note_time || 0)+50, note.time * one_sec_ms - pluck_duration);
+                                    if(time_diff >= pluck_time) {
+                                        let offsetX = plucking_string.pluck_offset_x ? plucking_string.pluck_offset_x : plucking_string.string_center.x + (Math.random() * 2 - 1)*plucking_string.string_width/2;
+                                        let progress = (time_diff - pluck_time) / pluck_duration;
+                                        let offsetY = plucking_string.string_center.y + progress * plucking_string.string_slack/2;
+                                        plucking_string.set_pluck_offsets(offsetX, offsetY);
+                                    }
+                                }
+                            })
+                            
                             let note = notes[note_index];
+                            let note_time = note.time * one_sec_ms;
                             let string = midi_string_map[note.midi];
-                            if(string && document.hasFocus()) {
-                                string.auto_pluck();
-                            }
-                            note_index++;
-                            if(note_index >= notes.length) {
-                                note_index = 0;
-                                start = Date.now()
+
+                            if(time_diff >= note_time) {
+                                if(string) {
+                                    string.pluck();
+                                }
+                                note_index++;
+                                notes_map_cursors[note.midi]++
+
+                                string.prev_note_time = note_time;
+                                if(note_index >= notes.length) {
+                                    window.pause = true;
+                                }
                             }
                         }
                     }
 
-                    $("#start-button").one('mousedown touchstart', function() {
+                    $("#chopin-button").one('mousedown touchstart', function() {
+                        window.audio_context.resume();
+                        window.pause = false;
+                        frame();
+                        $("#buttons").remove()
+                    })
+                    $("#playground-button").one('mousedown touchstart', function() {
                         window.audio_context.resume();
                         frame();
-                        $(this).remove()
+                        $("#buttons").remove()
                     })
 
 
@@ -207,6 +255,7 @@
                             if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - auto_pluck_distance && offsetY < string.string_position.y + auto_pluck_distance) {
                                 string.set_pluck_offsets(offsetX, offsetY);
                                 string.stop_sound()
+                                string.hand_plucking = true;
                             }
                         });
                         always_pluck = true;
@@ -219,8 +268,9 @@
                         let {offsetX, offsetY} = click_or_touch_coordinates(e);
                         
                         strings.forEach(string => {
-                            if(string.plucking) {
+                            if(string.hand_plucking) {
                                 string.pluck(offsetX, offsetY)
+                                string.hand_plucking = false;
                             }
                         });
                         
@@ -233,10 +283,11 @@
                                 if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - auto_pluck_distance && offsetY < string.string_position.y + auto_pluck_distance) {
 
                                     string.set_pluck_offsets(offsetX, offsetY);
+                                    string.hand_plucking = true;
                                     string.stop_sound()
                                 }
                             }
-                            if(string.plucking) {
+                            if(string.hand_plucking) {
                                 string.set_pluck_offsets(offsetX, offsetY)
                             }
                         });
@@ -268,7 +319,10 @@
     <body>
         <div class='container'>
             <div id='draw'> </div>
-            <div id="start-button">Start audio</div>
+            <div id="buttons">
+                <div class='button' id='chopin-button'>Chopin</div>
+                <div class='button' id='playground-button'>Playground</div>
+            </div>
         </div>
     </body>
 </html>
