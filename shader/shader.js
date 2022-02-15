@@ -39,6 +39,7 @@
 
     const VERTEX_SHADER =
         `#version 300 es
+
   
   const vec2[4] POSITIONS = vec2[](
     vec2(-1.0, -1.0),
@@ -58,9 +59,15 @@
   }
   `;
 
+    let num_strings = 60;
+    let num_overtones = 15;
+
     const FRAGMENT_SHADER =
         `#version 300 es
   
+        #define NUM_STRINGS ${num_strings}
+        #define NUM_OVERTONES ${num_overtones}
+
   precision highp float;
   
   out vec4 o_color;
@@ -69,7 +76,8 @@
   uniform float u_blockOffset;
   uniform float u_freq;
   uniform vec2 u_resolution;
-  
+
+  uniform float u_overtones[NUM_STRINGS * NUM_OVERTONES];
   
   float sine(float freq, float time) {
     return sin(freq * 6.28318530718 * time);
@@ -77,28 +85,28 @@
   
   vec2 mainSound(float time) {
     float sum = 0.0;
-    
-    int num_strings = 1300;
-    float num_strings_f = float(num_strings);
-    int num_overtones = 15;
-    float num_overtones_f = float(num_overtones);
+    float num_strings_f = float(NUM_STRINGS);
+    float num_overtones_f = float(NUM_OVERTONES);
 
-    float amp = 1.0 / (num_strings_f * num_overtones_f);
+    float amp = 2.0 / (num_strings_f * num_overtones_f);
     float freq;
-    float ofreq;
+    float sfreq;
     float ttime = time;
 
-    for (int i = 0; i < num_strings; i++) {
-        ttime -= 0.01;
+    for (int i = 0; i < NUM_STRINGS; i++) {
+        ttime -= 0.1;
         float ii = float(i);
         freq = u_freq;
-        ofreq = exp(log(freq*(ii+1.0)) + 0.05776226 * ii);
+        sfreq = exp(log(freq*(ii+1.0)) + 0.05776226 * ii);
 
-        for(freq = ofreq ; freq <= ofreq * num_overtones_f; freq += ofreq){
+        for(int j = 0; j < NUM_OVERTONES; j++) {
+            float jj = float(j);
+            float ofreq = sfreq * jj;
+            float overtone_amp = min(1.0, u_overtones[i * NUM_OVERTONES + j]);
             if(ttime > 0.0) {
-                float damp = amp * pow(1.0 - (ttime/10.0), 4.0*freq/ofreq);
+                float damp = overtone_amp * amp * pow(1.0 - (ttime/10.0), 4.0 * jj);
                 if(damp > 0.00001) {
-                    sum += sine(freq, time) * damp;
+                    sum += sine(ofreq, time) * damp;
                 }
             }
         }
@@ -137,12 +145,26 @@
         const program = createProgramFromSource(gl, VERTEX_SHADER, FRAGMENT_SHADER);
         const samples = WIDTH * HEIGHT;
 
-        const uniforms = getUniformLocations(gl, program, ['u_sampleRate', 'u_blockOffset', 'u_resolution', 'u_freq']);
+        const uniforms = getUniformLocations(gl, program, ['u_sampleRate', 'u_blockOffset', 'u_resolution', 'u_freq', 'u_overtones']);
 
         gl.useProgram(program);
         gl.uniform1f(uniforms['u_sampleRate'], audioCtx.sampleRate);
         gl.uniform2f(uniforms['u_resolution'], WIDTH, HEIGHT);
         gl.uniform1f(uniforms['u_freq'], freq);
+        
+        const overtone_amplitudes = new Float32Array(num_strings * num_overtones);
+        gl.uniform1f(uniforms['u_num_strings'], num_strings);
+        gl.uniform1f(uniforms['u_num_overtones'], num_overtones);
+        
+        for (let i = 0; i < num_strings; i++) {
+            for (let j = 0; j < num_overtones; j += 1) {
+                overtone_amplitudes[i * num_overtones + j] = 1 / j;
+            }
+        }
+        gl.uniform1fv(uniforms['u_overtones'], overtone_amplitudes);
+        
+        console.log("Max fragment uniform vectors", gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS));
+
 
         let i = 0;
 
