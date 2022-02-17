@@ -90,24 +90,23 @@
     float num_overtones_f = float(NUM_OVERTONES);
 
     float amp = 20.0 / (num_strings_f * num_overtones_f);
-    float freq;
-    float sfreq;
     float ttime = time;
 
     for (int i = 0; i < NUM_STRINGS; i++) {
-        ttime -= 0.1;
         float ii = float(i);
-        freq = u_freq;
-        sfreq = exp(log(freq*(ii+1.0)) + 0.05776226 * ii);
-
+        
         for(int j = 0; j < NUM_OVERTONES; j++) {
             float jj = float(j);
-            float ofreq = sfreq * jj;
-            float oamp = float(texelFetch(u_overtones_texture, ivec2(i * NUM_OVERTONES + j, 0), 0).x);
+            vec4 vals = texelFetch(u_overtones_texture, ivec2(i * NUM_OVERTONES + j, 0), 0);
+            float oamp = vals.y;
+            float ofreq = vals.x;
+            float start_time = vals.z;
+            float duration = vals.w;
+            ttime = time - start_time;
             // float overtone_amp = min(1.0, u_overtones[i * NUM_OVERTONES + j]);
             float overtone_amp = min(1.0, oamp);
-            if(ttime > 0.0) {
-                float damp = overtone_amp * amp * pow(1.0 - (ttime/10.0), 4.0 * jj);
+            if(ttime > 0.0 && ttime < duration) {
+                float damp = overtone_amp * amp * pow(1.0 - (ttime/duration), 4.0 * (jj+1.0));
                 if(damp > 0.00001) {
                     sum += sine(ofreq, time) * damp;
                 }
@@ -144,8 +143,8 @@
         canvas.width = WIDTH;
         canvas.height = HEIGHT;
         gl = canvas.getContext('webgl2');
-        //const ext = gl.getExtension('EXT_color_buffer_float');
-        //console.log("Extension", ext);
+        const ext = gl.getExtension('EXT_color_buffer_float');
+        console.log("Extension", ext);
 
         const program = createProgramFromSource(gl, VERTEX_SHADER, FRAGMENT_SHADER);
         const samples = WIDTH * HEIGHT;
@@ -161,17 +160,22 @@
         gl.uniform1f(uniforms['u_num_strings'], num_strings);
         gl.uniform1f(uniforms['u_num_overtones'], num_overtones);
         
-        const overtones_texture = new Uint8Array(num_strings * num_overtones * 4);
+        const overtones_texture = new Float32Array(num_strings * num_overtones * 4);
 
+        let base_freq = 55;
         for (let i = 0; i < num_strings; i++) {
+            let s_freq = Math.exp(Math.log(base_freq) + 0.05776226504666212 * i);
             for (let j = 0; j < num_overtones; j += 1) {
                 overtone_amplitudes[i * num_overtones + j] = 1 / (j+1);
 
-                let amp = Math.floor(255 * 1 / (j+1));
-                overtones_texture[(i * num_overtones + j)*4] = amp;
+                let amp = 0//1 / (j+1);
+                let duration = 4;
+                let start_at = i;
+                let o_freq = s_freq * (j+1);
+                overtones_texture[(i * num_overtones + j)*4] = o_freq;
                 overtones_texture[(i * num_overtones + j)*4 + 1] = amp;
-                overtones_texture[(i * num_overtones + j)*4 + 2] = amp;
-                overtones_texture[(i * num_overtones + j)*4 + 3] = amp;
+                overtones_texture[(i * num_overtones + j)*4 + 2] = start_at;
+                overtones_texture[(i * num_overtones + j)*4 + 3] = duration;
             }
             
         }
@@ -179,14 +183,39 @@
         
         var texture = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, overtone_amplitudes.length, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, overtones_texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, overtone_amplitudes.length, 1, 0, gl.RGBA, gl.FLOAT, overtones_texture);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.uniform1i(uniforms['u_overtones_texture'], overtones_texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.uniform1f(uniforms['u_overtones_texture'], overtones_texture);
         
         console.log("Max fragment uniform vectors", gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS));
 
-        let i = 0;
+        let blockOffset = 0;
+        
+        let update_strings = function(string_id) {
+            
+            let i = string_id;
+            for (let j = 0; j < num_overtones; j += 1) {
+                let amp = 1 / (j+1);
+                let duration = 4;
+                let start_at = blockOffset * samples / audioCtx.sampleRate;
+                //let o_freq = s_freq * (j+1);
+                //overtones_texture[(i * num_overtones + j)*4] = o_freq;
+                overtones_texture[(i * num_overtones + j)*4 + 1] = amp;
+                overtones_texture[(i * num_overtones + j)*4 + 2] = start_at;
+                overtones_texture[(i * num_overtones + j)*4 + 3] = duration;
+            }
+            gl.uniform1f(uniforms['u_overtones_texture'], overtones_texture);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, overtone_amplitudes.length, 1, 0, gl.RGBA, gl.FLOAT, overtones_texture);
+        }
 
+        document.addEventListener('keydown', function(e) {
+            let key = parseInt(e.key);
+            if(key !== undefined) {
+                update_strings(key);
+            }
+        });
+        
         node.onaudioprocess = (e) => {
             //gl.useProgram(program);
             //const uniforms = getUniformLocations(gl, program, ['u_sampleRate', 'u_blockOffset', 'u_resolution']);
@@ -196,7 +225,7 @@
             const outputR = e.outputBuffer.getChannelData(1);
     
 
-            gl.uniform1f(uniforms['u_blockOffset'], i * samples / audioCtx.sampleRate);
+            gl.uniform1f(uniforms['u_blockOffset'], blockOffset * samples / audioCtx.sampleRate);
             gl.drawArrays(gl.TRIANGLES, 0, 6);
             gl.readPixels(0, 0, WIDTH, HEIGHT, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
 
@@ -205,7 +234,7 @@
                 outputR[j] = (pixels[j * 4 + 2] + 256 * pixels[j * 4 + 3]) / 65535 * 2 - 1;
             }
 
-            i += 1;
+            blockOffset += 1;
             // if(i * samples >= audioCtx.sampleRate * DURATION) {
             //     node.disconnect();
             // }
