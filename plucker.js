@@ -1,9 +1,9 @@
 X_INCREMENT = 5;
 
-let auto_increment = 1;
+let auto_increment = 0;
 
-function pluckableString({canvas, overtones, wave_height, string_width, string_center, angle, duration, node, string_slack}) {
-    this.node = node;
+function pluckableString({canvas, overtones, wave_height, string_width, string_center, angle, duration, audio, string_slack}) {
+    this.audio = audio;
     this.overtones = overtones; // {freq, amplitude}
     this.id = auto_increment++;
 
@@ -230,31 +230,25 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     }
 
     this.post_message_to_worklet = function(message) {
-        this.node.port.postMessage(message);
+        if(this.audio) this.audio.updateString(message);
     }
 
     this.sync_worklet = function() {
-        let audio_context = window.audio_context;
-        if(audio_context.state === 'suspended') {
-            audio_context.resume();
-        }
-        if(this.node) {
-            if(this.playing) {
-                this.post_message_to_worklet({
-                    string: {
-                        id: this.id,
-                        overtones: this.overtones,
-                        duration: this.duration
-                    },
-                });
-            } else {
-                this.post_message_to_worklet({
-                    string: {
-                        id: this.id,
-                        stopped: !this.playing,
-                    },
-                });
-            }
+        if(this.playing) {
+            this.post_message_to_worklet({
+                string: {
+                    id: this.id,
+                    overtones: this.overtones,
+                    duration: this.duration
+                },
+            });
+        } else {
+            this.post_message_to_worklet({
+                string: {
+                    id: this.id,
+                    stopped: !this.playing,
+                },
+            });
         }
     }
     

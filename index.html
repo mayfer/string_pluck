@@ -9,6 +9,7 @@
         <script type='text/javascript' src='unmute.js'></script>
         <script type='text/javascript' src='draw.js'></script>
         <script type='text/javascript' src='notes.js'></script>
+        <script type='text/javascript' src='audio_shader.js'></script>
         <script type='text/javascript' src='plucker.js'></script>
         <script type='text/javascript' src='chopin.js'></script>
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -55,7 +56,7 @@
                 let duration = 5000;
                 let string_y = 150;
                 
-                var overtone_freqs = Array.from({length: 14}, (_, i) => (i+1) * 110);
+                var overtone_freqs = Array.from({length: 15}, (_, i) => (i+1) * 110);
                 var overtones = overtone_freqs.map(freq => { return {freq, amplitude: 1} });
 
 
@@ -76,7 +77,7 @@
                 //     });
                 // }
 
-                let num_strings = 70;
+                let num_strings = 150;
                 let width = canvas_jq.width();
                 let height = canvas_jq.height();
                 let width_55hz = Math.min(width - 100, 500)
@@ -84,231 +85,222 @@
                 for(var i=0; i<num_strings; i++) {
                     initial_strings.push({
                         string_center: {x: width/2, y: 100 + (i+1) * ((height-200) / num_strings)},
-                        //string_width: Notes.relative_note(width_55hz, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
-                        string_width: Notes.relative_note(width_55hz*2, -i),
+                        string_width: Notes.relative_note(width_55hz, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
+                        //string_width: Notes.relative_note(width_55hz*2, -i),
                         angle: 0, // i * Math.PI / 64
                         midi_number: midi_number_a1 + i,
                     });
                 }
 
-                window.audio_context = new AudioContext({sampleRate: 44100});
-                window.audio_context.audioWorklet.addModule("./worklet.js").then(() => {
+                let audio_shader = new AudioShader();
 
-                    //let lowpass_filter = window.audio_context.createBiquadFilter();
-                    //lowpass_filter.type = "lowpass";
-                    //lowpass_filter.frequency.value = 800;
-
-                    let audio_node = new AudioWorkletNode(window.audio_context, 'string-processor');
-                    audio_node.connect(window.audio_context.destination);
-                    //audio_node.connect(lowpass_filter);
-                    //lowpass_filter.connect(window.audio_context.destination);
+                let audio_node = audio_shader.setup_audio();
 
 
-                    let strings = [];
-                    let midi_string_map = {};
+                let strings = [];
+                let midi_string_map = {};
 
-                    for(let string of initial_strings) {
-                        var drawWave = new pluckableString({
-                            canvas: canvas_jq.get(0),
-                            overtones: overtones.map((o, i) => { return {freq: parseInt(overtones[0].freq * width_55hz/string.string_width) * (i+1), amplitude: o.amplitude } }),
-                            wave_height: 50,
-                            string_width: string.string_width,
-                            string_center: string.string_center,
-                            angle: string.angle,
-                            duration,
-                            node: audio_node,
-                            string_slack: Math.max(5, Math.min(30, string.string_width/5)),
-                        })
-                        strings.push(drawWave);
-                        midi_string_map[string.midi_number] = drawWave;
-                    }
-
-                    var canvas = canvas_jq.get(0);
-                    var context = canvas.getContext("2d");
-
-                    context.fillStyle = "rgba(0, 0, 0, 0.5)";
-                    context.lineWidth = 2;
-                    context.strokeStyle = "#fff";
-
-
-                    function init() {
-                        strings.forEach(s => s.draw_still());
-                    }
-                    init()
-
-                    let start;
-                    let note_index = 0;
-                    let pluck_index = 0;
-                    let notes = chopin.tracks[0].notes;
-                    window.pause = true
-
-                    let speed = 0.8
-                    let pluck_duration = 200;
-                    let one_sec_ms = 1000 * (1/speed);
-
-                    let notes_map = {}
-                    let notes_map_cursors = {}
-                    notes.forEach(note => {
-                        if(!notes_map[note.midi]) {
-                            notes_map[note.midi] = [];
-                            notes_map_cursors[note.midi] = 0;
-                        }
-                        notes_map[note.midi].push(note);
+                for(let string of initial_strings) {
+                    var drawWave = new pluckableString({
+                        canvas: canvas_jq.get(0),
+                        overtones: overtones.map((o, i) => { return {freq: parseInt(overtones[0].freq * width_55hz/string.string_width) * (i+1), amplitude: o.amplitude } }),
+                        wave_height: 50,
+                        string_width: string.string_width,
+                        string_center: string.string_center,
+                        angle: string.angle,
+                        duration,
+                        audio: audio_shader,
+                        string_slack: Math.max(5, Math.min(30, string.string_width/5)),
                     })
+                    strings.push(drawWave);
+                    midi_string_map[string.midi_number] = drawWave;
+                }
 
-                    let frame = () => {
-                        context.fillRect(0, 0, context.width, context.height);
-                        strings.forEach(s => {
-                            if(s.playing) s.draw()
-                            else if(s.plucking) s.draw_pluck();
-                            else s.draw_still();
-                        });
-                        requestAnimationFrame(frame)
+                var canvas = canvas_jq.get(0);
+                var context = canvas.getContext("2d");
 
-                        if(!start) {
-                            start = Date.now();
-                        }
-                        let time_diff = Date.now()-start;
+                context.fillStyle = "rgba(0, 0, 0, 0.5)";
+                context.lineWidth = 2;
+                context.strokeStyle = "#fff";
 
-                        // if(!document.hasFocus()) {
-                        //     window.pause = true;
-                        // }
-                        if(!window.pause) {
-                            Object.keys(notes_map_cursors).forEach(midi_num => {
-                                let cursor = notes_map_cursors[midi_num];
-                                let note = notes_map[midi_num][cursor];
-                                if(note) {
-                                    let plucking_string = midi_string_map[note.midi]
-                                    let pluck_time = Math.max((plucking_string.prev_note_time || 0)+50, note.time * one_sec_ms - pluck_duration);
-                                    if(time_diff >= pluck_time) {
-                                        let offsetX = plucking_string.pluck_offset_x ? plucking_string.pluck_offset_x : plucking_string.string_center.x + (Math.random() * 2 - 1)*plucking_string.string_width/2;
-                                        let progress = (time_diff - pluck_time) / pluck_duration;
-                                        let offsetY = plucking_string.string_center.y + progress * plucking_string.string_slack/2;
-                                        plucking_string.set_pluck_offsets(offsetX, offsetY);
-                                    }
-                                }
-                            })
-                            
-                            let note = notes[note_index];
-                            let note_time = note.time * one_sec_ms;
-                            let string = midi_string_map[note.midi];
 
-                            if(time_diff >= note_time) {
-                                if(string) {
-                                    string.pluck();
-                                }
-                                note_index++;
-                                notes_map_cursors[note.midi]++
+                function init() {
+                    strings.forEach(s => s.draw_still());
+                }
+                init()
 
-                                string.prev_note_time = note_time;
-                                if(note_index >= notes.length) {
-                                    window.pause = true;
-                                }
-                            }
-                        }
+                let start;
+                let note_index = 0;
+                let pluck_index = 0;
+                let notes = chopin.tracks[0].notes;
+                window.pause = true
+
+                let speed = 0.8
+                let pluck_duration = 200;
+                let one_sec_ms = 1000 * (1/speed);
+
+                let notes_map = {}
+                let notes_map_cursors = {}
+                notes.forEach(note => {
+                    if(!notes_map[note.midi]) {
+                        notes_map[note.midi] = [];
+                        notes_map_cursors[note.midi] = 0;
                     }
+                    notes_map[note.midi].push(note);
+                })
 
-                    $("#chopin-button").one('mousedown touchstart', function() {
-                        window.audio_context.resume();
-                        window.pause = false;
-                        frame();
-                        $("#buttons").remove()
-                    })
-                    $("#playground-button").one('mousedown touchstart', function() {
-                        window.audio_context.resume();
-                        frame();
-                        $("#buttons").remove()
-                    })
-
-
-                    function click_or_touch_coordinates(e) {
-                        if(e.type == 'touchstart' || e.type == 'touchmove' || e.type == 'touchend' || e.type == 'touchcancel'){
-                            var touch = e.originalEvent.touches[0] || e.originalEvent.changedTouches[0];
-                            x = touch.pageX;
-                            y = touch.pageY;
-                        } else if (e.type == 'mousedown' || e.type == 'mouseup' || e.type == 'mousemove' || e.type == 'mouseover'|| e.type=='mouseout' || e.type=='mouseenter' || e.type=='mouseleave') {
-                            x = e.clientX;
-                            y = e.clientY;
-                        }
-
-                        let offsetX = Math.min(Math.max(x - canvas_jq.offset().left, 10), canvas_jq.width()-10)
-                        let offsetY = Math.min(Math.max(y - canvas_jq.offset().top, 1), canvas_jq.height())
-                        return {offsetX, offsetY};
-                    }
-
-                    let always_pluck = false;
-                    let prev_cursor;
-
-                    $(window).blur(function(){
-                        strings.forEach(s => s.stop_sound());
-                        init()
+                let frame = () => {
+                    context.fillRect(0, 0, context.width, context.height);
+                    strings.forEach(s => {
+                        if(s.playing) s.draw()
+                        else if(s.plucking) s.draw_pluck();
+                        else s.draw_still();
                     });
+                    requestAnimationFrame(frame)
 
-                    let auto_pluck_distance = 5;
-
-                    $(document).on('mousedown touchstart', (e) => {
-                        e.preventDefault();
-                        let {offsetX, offsetY} = click_or_touch_coordinates(e);
-                        prev_cursor = {x: offsetX, y: offsetY};
-
-                        strings.forEach(string => {
-                            if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - auto_pluck_distance && offsetY < string.string_position.y + auto_pluck_distance) {
-                                string.set_pluck_offsets(offsetX, offsetY);
-                                string.stop_sound()
-                                string.hand_plucking = true;
-                            }
-                        });
-                        always_pluck = true;
-                    })
-
-                    $(document).on('mouseup touchend', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        prev_cursor = null;
-                        let {offsetX, offsetY} = click_or_touch_coordinates(e);
-                        
-                        strings.forEach(string => {
-                            if(string.hand_plucking) {
-                                string.pluck(offsetX, offsetY)
-                                string.hand_plucking = false;
-                            }
-                        });
-                        
-                        always_pluck = false;
-                    })
-
-                    let cursor_move_handler = function(offsetX, offsetY) {
-                        strings.forEach(string => {
-                            if(always_pluck) {
-                                if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - auto_pluck_distance && offsetY < string.string_position.y + auto_pluck_distance) {
-
-                                    string.set_pluck_offsets(offsetX, offsetY);
-                                    string.hand_plucking = true;
-                                    string.stop_sound()
-                                }
-                            }
-                            if(string.hand_plucking) {
-                                string.set_pluck_offsets(offsetX, offsetY)
-                            }
-                        });
+                    if(!start) {
+                        start = Date.now();
                     }
-                    $(document).on('mousemove touchmove', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        let {offsetX, offsetY} = click_or_touch_coordinates(e);
-                        if(prev_cursor) {
-                            let distance = Math.sqrt(Math.pow(offsetX - prev_cursor.x, 2) + Math.pow(offsetY - prev_cursor.y, 2));
-                            if(distance > 5) {
-                                let slices = Math.floor(distance / 5);
-                                for(let i=1; i<=slices; i++) {
-                                    cursor_move_handler(prev_cursor.x + i*(offsetX - prev_cursor.x)/slices, prev_cursor.y + i*(offsetY - prev_cursor.y)/slices);
+                    let time_diff = Date.now()-start;
+
+                    // if(!document.hasFocus()) {
+                    //     window.pause = true;
+                    // }
+                    if(!window.pause) {
+                        Object.keys(notes_map_cursors).forEach(midi_num => {
+                            let cursor = notes_map_cursors[midi_num];
+                            let note = notes_map[midi_num][cursor];
+                            if(note) {
+                                let plucking_string = midi_string_map[note.midi]
+                                let pluck_time = Math.max((plucking_string.prev_note_time || 0)+50, note.time * one_sec_ms - pluck_duration);
+                                if(time_diff >= pluck_time) {
+                                    let offsetX = plucking_string.pluck_offset_x ? plucking_string.pluck_offset_x : plucking_string.string_center.x + (Math.random() * 2 - 1)*plucking_string.string_width/2;
+                                    let progress = (time_diff - pluck_time) / pluck_duration;
+                                    let offsetY = plucking_string.string_center.y + progress * plucking_string.string_slack/2;
+                                    plucking_string.set_pluck_offsets(offsetX, offsetY);
                                 }
+                            }
+                        })
+                        
+                        let note = notes[note_index];
+                        let note_time = note.time * one_sec_ms;
+                        let string = midi_string_map[note.midi];
+
+                        if(time_diff >= note_time) {
+                            if(string) {
+                                string.pluck();
+                            }
+                            note_index++;
+                            notes_map_cursors[note.midi]++
+
+                            string.prev_note_time = note_time;
+                            if(note_index >= notes.length) {
+                                window.pause = true;
                             }
                         }
-                        cursor_move_handler(offsetX, offsetY);
-                        prev_cursor = {x: offsetX, y: offsetY};
-                    })
+                    }
+                }
+
+                $("#chopin-button").one('mousedown touchstart', function() {
+                    audio_shader.resume();
+                    window.pause = false;
+                    frame();
+                    $("#buttons").remove()
+                })
+                $("#playground-button").one('mousedown touchstart', function() {
+                    audio_shader.resume();
+                    frame();
+                    $("#buttons").remove()
+                })
+
+
+                function click_or_touch_coordinates(e) {
+                    if(e.type == 'touchstart' || e.type == 'touchmove' || e.type == 'touchend' || e.type == 'touchcancel'){
+                        var touch = e.originalEvent.touches[0] || e.originalEvent.changedTouches[0];
+                        x = touch.pageX;
+                        y = touch.pageY;
+                    } else if (e.type == 'mousedown' || e.type == 'mouseup' || e.type == 'mousemove' || e.type == 'mouseover'|| e.type=='mouseout' || e.type=='mouseenter' || e.type=='mouseleave') {
+                        x = e.clientX;
+                        y = e.clientY;
+                    }
+
+                    let offsetX = Math.min(Math.max(x - canvas_jq.offset().left, 10), canvas_jq.width()-10)
+                    let offsetY = Math.min(Math.max(y - canvas_jq.offset().top, 1), canvas_jq.height())
+                    return {offsetX, offsetY};
+                }
+
+                let always_pluck = false;
+                let prev_cursor;
+
+                $(window).blur(function(){
+                    strings.forEach(s => s.stop_sound());
+                    init()
                 });
+
+                let auto_pluck_distance = 5;
+
+                $(document).on('mousedown touchstart', (e) => {
+                    e.preventDefault();
+                    let {offsetX, offsetY} = click_or_touch_coordinates(e);
+                    prev_cursor = {x: offsetX, y: offsetY};
+
+                    strings.forEach(string => {
+                        if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - auto_pluck_distance && offsetY < string.string_position.y + auto_pluck_distance) {
+                            string.set_pluck_offsets(offsetX, offsetY);
+                            string.stop_sound()
+                            string.hand_plucking = true;
+                        }
+                    });
+                    always_pluck = true;
+                })
+
+                $(document).on('mouseup touchend', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    prev_cursor = null;
+                    let {offsetX, offsetY} = click_or_touch_coordinates(e);
+                    
+                    strings.forEach(string => {
+                        if(string.hand_plucking) {
+                            string.pluck(offsetX, offsetY)
+                            string.hand_plucking = false;
+                        }
+                    });
+                    
+                    always_pluck = false;
+                })
+
+                let cursor_move_handler = function(offsetX, offsetY) {
+                    strings.forEach(string => {
+                        if(always_pluck) {
+                            if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - auto_pluck_distance && offsetY < string.string_position.y + auto_pluck_distance) {
+
+                                string.set_pluck_offsets(offsetX, offsetY);
+                                string.hand_plucking = true;
+                                string.stop_sound()
+                            }
+                        }
+                        if(string.hand_plucking) {
+                            string.set_pluck_offsets(offsetX, offsetY)
+                        }
+                    });
+                }
+                $(document).on('mousemove touchmove', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    let {offsetX, offsetY} = click_or_touch_coordinates(e);
+                    if(prev_cursor) {
+                        let distance = Math.sqrt(Math.pow(offsetX - prev_cursor.x, 2) + Math.pow(offsetY - prev_cursor.y, 2));
+                        if(distance > 5) {
+                            let slices = Math.floor(distance / 5);
+                            for(let i=1; i<=slices; i++) {
+                                cursor_move_handler(prev_cursor.x + i*(offsetX - prev_cursor.x)/slices, prev_cursor.y + i*(offsetY - prev_cursor.y)/slices);
+                            }
+                        }
+                    }
+                    cursor_move_handler(offsetX, offsetY);
+                    prev_cursor = {x: offsetX, y: offsetY};
+                })
 
             });
 
