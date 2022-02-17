@@ -59,7 +59,7 @@
   }
   `;
 
-    let num_strings = 60;
+    let num_strings = 10;
     let num_overtones = 15;
 
     const FRAGMENT_SHADER =
@@ -77,7 +77,8 @@
   uniform float u_freq;
   uniform vec2 u_resolution;
 
-  uniform float u_overtones[NUM_STRINGS * NUM_OVERTONES];
+  //uniform float u_overtones[NUM_STRINGS * NUM_OVERTONES];
+  uniform sampler2D u_overtones_texture;
   
   float sine(float freq, float time) {
     return sin(freq * 6.28318530718 * time);
@@ -88,7 +89,7 @@
     float num_strings_f = float(NUM_STRINGS);
     float num_overtones_f = float(NUM_OVERTONES);
 
-    float amp = 2.0 / (num_strings_f * num_overtones_f);
+    float amp = 20.0 / (num_strings_f * num_overtones_f);
     float freq;
     float sfreq;
     float ttime = time;
@@ -102,7 +103,9 @@
         for(int j = 0; j < NUM_OVERTONES; j++) {
             float jj = float(j);
             float ofreq = sfreq * jj;
-            float overtone_amp = min(1.0, u_overtones[i * NUM_OVERTONES + j]);
+            float oamp = float(texelFetch(u_overtones_texture, ivec2(i * NUM_OVERTONES + j, 0), 0).x);
+            // float overtone_amp = min(1.0, u_overtones[i * NUM_OVERTONES + j]);
+            float overtone_amp = min(1.0, oamp);
             if(ttime > 0.0) {
                 float damp = overtone_amp * amp * pow(1.0 - (ttime/10.0), 4.0 * jj);
                 if(damp > 0.00001) {
@@ -140,7 +143,9 @@
         const canvas = document.createElement('canvas');
         canvas.width = WIDTH;
         canvas.height = HEIGHT;
-        const gl = canvas.getContext('webgl2');
+        gl = canvas.getContext('webgl2');
+        //const ext = gl.getExtension('EXT_color_buffer_float');
+        //console.log("Extension", ext);
 
         const program = createProgramFromSource(gl, VERTEX_SHADER, FRAGMENT_SHADER);
         const samples = WIDTH * HEIGHT;
@@ -156,15 +161,29 @@
         gl.uniform1f(uniforms['u_num_strings'], num_strings);
         gl.uniform1f(uniforms['u_num_overtones'], num_overtones);
         
+        const overtones_texture = new Uint8Array(num_strings * num_overtones * 4);
+
         for (let i = 0; i < num_strings; i++) {
             for (let j = 0; j < num_overtones; j += 1) {
-                overtone_amplitudes[i * num_overtones + j] = 1 / j;
+                overtone_amplitudes[i * num_overtones + j] = 1 / (j+1);
+
+                let amp = Math.floor(255 * 1 / (j+1));
+                overtones_texture[(i * num_overtones + j)*4] = amp;
+                overtones_texture[(i * num_overtones + j)*4 + 1] = amp;
+                overtones_texture[(i * num_overtones + j)*4 + 2] = amp;
+                overtones_texture[(i * num_overtones + j)*4 + 3] = amp;
             }
+            
         }
         gl.uniform1fv(uniforms['u_overtones'], overtone_amplitudes);
         
+        var texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, overtone_amplitudes.length, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, overtones_texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.uniform1i(uniforms['u_overtones_texture'], overtones_texture);
+        
         console.log("Max fragment uniform vectors", gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS));
-
 
         let i = 0;
 
