@@ -55,8 +55,10 @@
 
                 let duration = 5000;
                 let string_y = 150;
+                let num_strings = 72;
+                let num_overtones = 15;
                 
-                var overtone_freqs = Array.from({length: 15}, (_, i) => (i+1) * 110);
+                var overtone_freqs = Array.from({length: num_overtones}, (_, i) => (i+1) * 110);
                 var overtones = overtone_freqs.map(freq => { return {freq, amplitude: 1} });
 
 
@@ -77,7 +79,6 @@
                 //     });
                 // }
 
-                let num_strings = 150;
                 let width = canvas_jq.width();
                 let height = canvas_jq.height();
                 let width_55hz = Math.min(width - 100, 500)
@@ -85,14 +86,14 @@
                 for(var i=0; i<num_strings; i++) {
                     initial_strings.push({
                         string_center: {x: width/2, y: 100 + (i+1) * ((height-200) / num_strings)},
-                        string_width: Notes.relative_note(width_55hz, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
-                        //string_width: Notes.relative_note(width_55hz*2, -i),
+                        //string_width: Notes.relative_note(width_55hz, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
+                        string_width: Notes.relative_note(width_55hz*2, -i),
                         angle: 0, // i * Math.PI / 64
                         midi_number: midi_number_a1 + i,
                     });
                 }
 
-                let audio_shader = new AudioShader();
+                let audio_shader = new AudioShader(num_strings, num_overtones);
 
                 let audio_node = audio_shader.setup_audio();
 

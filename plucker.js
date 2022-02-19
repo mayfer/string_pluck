@@ -35,7 +35,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
                 let radians = 2 * Math.PI * (freq/(this.base_freq*2)) * i / points.length;
                 resonance += points[i] * -Math.sin(radians)
             }
-            freqs[freq] = resonance;
+            freqs[freq] = Math.abs(resonance);
         }
         //console.log(Object.keys(freqs).map(f => `${f}hz: ${freqs[f]}`).join("\n"));
         return freqs;
