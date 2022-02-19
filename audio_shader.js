@@ -89,7 +89,7 @@ function AudioShader(num_strings, num_overtones) {
     
     for (int i = 0; i < NUM_STRINGS; i++) {
         float ii = float(i);
-        float amp = sqrt(2.0 / (ii + 1.0)) / num_strings_f;
+        float amp = sqrt(2.0 / (ii + 1.0)) / (num_strings_f / 10.0);
         
         for(int j = 0; j < NUM_OVERTONES; j++) {
             float jj = float(j);
