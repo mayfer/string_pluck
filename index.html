@@ -14,6 +14,7 @@
         <script type='text/javascript' src='chopin.js'></script>
         <script type='text/javascript' src='midi/bach_cello.js'></script>
         <script type='text/javascript' src='midi/canon.js'></script>
+        <script type='text/javascript' src='midi/satie.js'></script>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
             html, body { margin: 0; padding: 0; background: black; height:  100%; }
@@ -142,7 +143,6 @@
                 
                 let speed = 0.75;
                 let pluck_duration = 200;
-                let one_sec_ms = 1000 * (1/speed);
                 
                 let notes_map = {}
                 let notes_map_cursors = {}
@@ -162,6 +162,9 @@
                 };
 
                 let frame = () => {
+
+                    let one_sec_ms = 1000 * (1/speed);
+
                     context.fillRect(0, 0, context.width, context.height);
                     strings.forEach(s => {
                         if(s.playing) s.draw()
@@ -227,6 +230,14 @@
                     window.pause = false;
                     set_midi_track(canon);
                     speed = 0.8
+                    frame();
+                    $("#buttons").remove()
+                })
+                $("#satie-button").one('mousedown touchstart', function() {
+                    audio_shader.resume();
+                    window.pause = false;
+                    set_midi_track(satie);
+                    speed = 1.3
                     frame();
                     $("#buttons").remove()
                 })
@@ -346,6 +357,7 @@
                 <div class='button' id='chopin-button'>Chopin</div>
                 <div class='button' id='bach-button'>Bach</div>
                 <div class='button' id='pachabel-button'>Pachabel</div>
+                <div class='button' id='satie-button'>Satie</div>
                 <div class='button' id='playground-button'>Playground</div>
             </div>
         </div>
