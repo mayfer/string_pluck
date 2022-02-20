@@ -92,9 +92,10 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         }
         let context = this.context;
         context.save();
-        let brightness = 0.1 + Math.pow((this.duration - this.time_diff)/this.duration, 4)
+        let brightness = 0.1 + Math.pow((this.duration - this.time_diff)/this.duration, 4);
+        let pluckness = Math.pow((this.duration - this.time_diff)/this.duration, 15) / 3;
         brightness = Math.max(0, Math.min(1, brightness));
-        context.strokeStyle = "rgba(255, 255, 255, "+brightness+")"
+        context.strokeStyle = "rgba(255, 255, "+Math.floor((1-pluckness)*255)+", "+brightness+")"
         context.translate(this.string_center.x, this.string_center.y);
         context.rotate(this.angle);
         context.translate(-this.string_center.x, -this.string_center.y);
@@ -137,7 +138,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     this.draw_pluck = function(offsetX, offsetY) {
         let context = this.context;
         context.save();
-        context.strokeStyle = "rgba(204, 204, 255, 0.7)"
+        context.strokeStyle = "rgba(255, 255, 200, 0.7)"
 
         context.translate(this.string_center.x, this.string_center.y);
         context.rotate(this.angle);
@@ -152,6 +153,13 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
             }
         }
 
+
+
+        context.fillStyle = "#c8b1e3"
+        context.beginPath();
+        context.arc(offsetX, offsetY, 4, 0, 2 * Math.PI, false);
+        context.fill();
+
         let string_y = this.string_position.y;
 
         context.beginPath();
@@ -159,11 +167,6 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         context.lineTo(offsetX, offsetY);
         context.lineTo(this.string_position.x + this.string_width, this.string_position.y);
         context.stroke();
-
-        context.fillStyle = "#ff8"
-        context.beginPath();
-        context.arc(offsetX, offsetY, 3, 0, 2 * Math.PI, false);
-        context.fill();
 
         context.restore();
 
