@@ -35,7 +35,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
                 let radians = 2 * Math.PI * (freq/(this.base_freq*2)) * i / points.length;
                 resonance += points[i] * -Math.sin(radians)
             }
-            freqs[freq] = Math.abs(resonance);
+            freqs[freq] = resonance;
         }
         //console.log(Object.keys(freqs).map(f => `${f}hz: ${freqs[f]}`).join("\n"));
         return freqs;
@@ -241,7 +241,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
             this.post_message_to_worklet({
                 string: {
                     id: this.id,
-                    overtones: this.overtones,
+                    overtones: this.overtones.map(o => { return { freq: o.freq, amplitude: Math.abs(o.amplitude)} }),
                     duration: this.duration
                 },
             });
