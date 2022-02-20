@@ -161,7 +161,13 @@
                     })
                 };
 
+                let last_frame_time;
+
                 let frame = () => {
+                    if(last_frame_time && Date.now() - last_frame_time > 1000) {
+                        window.pause = true
+                    }
+                    last_frame_time = Date.now();
 
                     let one_sec_ms = 1000 * (1/speed);
 
