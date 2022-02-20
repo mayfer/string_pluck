@@ -92,7 +92,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         }
         let context = this.context;
         context.save();
-        let brightness = 0.1 + Math.pow((this.duration - this.time_diff)/this.duration, 3)
+        let brightness = 0.1 + Math.pow((this.duration - this.time_diff)/this.duration, 4)
         brightness = Math.max(0, Math.min(1, brightness));
         context.strokeStyle = "rgba(255, 255, 255, "+brightness+")"
         context.translate(this.string_center.x, this.string_center.y);

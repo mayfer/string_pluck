@@ -89,7 +89,7 @@ function AudioShader(num_strings, num_overtones) {
     
     for (int i = 0; i < NUM_STRINGS; i++) {
         float ii = float(i);
-        float amp = sqrt(2.0 / (ii + 1.0)) / (num_strings_f / 10.0);
+        float amp = sqrt(2.0 / (ii/2. + 1.0)) / (num_strings_f / 10.0);
         
         for(int j = 0; j < NUM_OVERTONES; j++) {
             float jj = float(j);
@@ -105,7 +105,7 @@ function AudioShader(num_strings, num_overtones) {
             // float overtone_amp = min(1.0, u_overtones[i * NUM_OVERTONES + j]);
             float overtone_amp = min(1.0, ramped_amp);
             if(ttime > 0.0 && ttime < duration) {
-                float damp = overtone_amp * amp * pow(1.0 - (ttime/duration), 4.0 * (jj+1.0));
+                float damp = (1./((jj/3.)+1.)) * overtone_amp * amp * pow(1.0 - (ttime/duration), 4.0 * (jj+1.0));
                 if(damp > 0.00001) {
                     // to avoid beat patterns
                     float phase = 6.28318530718 * ii / num_strings_f;
