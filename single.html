@@ -87,15 +87,17 @@
                 let height = canvas_jq.height();
                 let width_55hz = Math.min(width - 100, 500)
                 let midi_number_a1 = 33;
-                for(var i=0; i<num_strings; i++) {
-                    initial_strings.push({
-                        string_center: {x: width/2, y: 100 + (i+1) * ((height-200) / num_strings)},
-                        //string_width: Notes.relative_note(width_55hz, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
-                        string_width: Notes.relative_note(width_55hz*2, -i),
-                        angle: 0, // i * Math.PI / 64
-                        midi_number: midi_number_a1 + i,
-                    });
-                }
+
+
+                let auto_pluck_distance = 100;
+
+                initial_strings.push({
+                    string_center: {x: width/2, y: height/2},
+                    //string_width: Notes.relative_note(width_55hz, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
+                    string_width: width_55hz,
+                    angle: 0, // i * Math.PI / 64
+                    midi_number: midi_number_a1,
+                });
 
                 let audio_shader = new AudioShader(num_strings, num_overtones);
 
@@ -115,7 +117,7 @@
                         angle: string.angle,
                         duration,
                         audio: audio_shader,
-                        string_slack: Math.max(5, Math.min(30, string.string_width/5)),
+                        string_slack: auto_pluck_distance,
                     })
                     strings.push(drawWave);
                     midi_string_map[string.midi_number] = drawWave;
@@ -223,55 +225,15 @@
                         }
                     }
                 }
-
-                $("#bach-button").one('mousedown touchstart', function() {
-                    audio_shader.resume();
+                window.started = false
+                $("#single-button").one('mousedown touchstart', function() {
                     setTimeout(() => {
-                        window.pause = false;
-                        set_midi_track(bach);
-                        speed = 0.75;
-                        frame();
-                    }, 500);
-                    $("#buttons").remove()
-                })
-                $("#pachabel-button").one('mousedown touchstart', function() {
-                    audio_shader.resume();
-                    window.pause = false;
-                    set_midi_track(canon);
-                    speed = 0.8
-                    frame();
-                    $("#buttons").remove()
-                })
-                $("#satie-button").one('mousedown touchstart', function() {
-                    audio_shader.resume();
-                    window.pause = false;
-                    set_midi_track(satie);
-                    speed = 1.3
-                    frame();
-                    $("#buttons").remove()
-                })
-                $("#chopin-button").one('mousedown touchstart', function() {
-                    audio_shader.resume();
-                    window.pause = false;
-                    set_midi_track(chopin);
-                    speed = 0.8
-                    frame();
-                    $("#buttons").remove()
-                })
-                $("#harp1-button").one('mousedown touchstart', function() {
-                    audio_shader.resume();
-                    window.pause = false;
-                    set_midi_track(harp1);
-                    speed = 1.5
-                    frame();
-                    $("#buttons").remove()
-                })
-                $("#playground-button").one('mousedown touchstart', function() {
+                        window.started = true
+                    }, 100)
                     audio_shader.resume();
                     frame();
                     $("#buttons").remove()
                 })
-
 
                 function click_or_touch_coordinates(e) {
                     if(e.type == 'touchstart' || e.type == 'touchmove' || e.type == 'touchend' || e.type == 'touchcancel'){
@@ -296,9 +258,11 @@
                     //init()
                 });
 
-                let auto_pluck_distance = 5;
 
                 $(document).on('mousedown touchstart', (e) => {
+                    if(!window.started) {
+                        return;
+                    }
                     e.preventDefault();
                     let {offsetX, offsetY} = click_or_touch_coordinates(e);
                     prev_cursor = {x: offsetX, y: offsetY};
@@ -314,6 +278,9 @@
                 })
 
                 $(document).on('mouseup touchend', (e) => {
+                    if(!window.started) {
+                        return;
+                    }
                     e.preventDefault();
                     e.stopPropagation();
                     prev_cursor = null;
@@ -345,6 +312,9 @@
                     });
                 }
                 $(document).on('mousemove touchmove', (e) => {
+                    if(!window.started) {
+                        return;
+                    }
                     e.preventDefault();
                     e.stopPropagation();
                     let {offsetX, offsetY} = click_or_touch_coordinates(e);
@@ -372,12 +342,7 @@
             <div id='draw'> </div>
             <div id="buttons">
                 <div>
-                    <div class='button' id='chopin-button'>Chopin</div>
-                    <div class='button' id='bach-button'>Bach</div>
-                    <div class='button' id='pachabel-button'>Pachabel</div>
-                    <div class='button' id='satie-button'>Satie</div>
-                    <div class='button' id='harp1-button'>Harp 1</div>
-                    <div class='button' id='playground-button'>Playground</div>
+                    <div class='button' id='single-button'>Start</div>
                 </div>
             </div>
         </div>
