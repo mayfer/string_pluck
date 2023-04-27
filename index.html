@@ -4,6 +4,12 @@
         <title>string theory, the guitar kind</title>
         <meta charset='utf-8' />
         <link rel="shortcut icon" href="#">
+        <meta name="twitter:card" content="summary">
+        <meta name="twitter:site" content="@mayfer">
+        <meta name="twitter:title" content="string simulator">
+        <meta name="twitter:description" content="This is an interactive string simulator that uses basic Fourier math to generate audio & visuals according to where on the string you pluck from. The audio math is done on the GPU in WebGL">
+        <meta name="twitter:image" content="https://i.imgur.com/DvnQIif.png">
+
         <!-- libs -->
         <script type='text/javascript' src='jquery.min.js?1'></script>
         <script type='text/javascript' src='unmute.js?1'></script>
@@ -18,7 +24,8 @@
         <script type='text/javascript' src='midi/harp1.js'></script>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-            html, body { margin: 0; padding: 0; background: black; height:  100%; }
+            html, body { margin: 0; padding: 0; background: black; height:  100%; font-family: sans-serif; }
+            .info { position: absolute; top: 10px; left: 0; width: 100%; text-align: center; color: #888; padding: 10px; }
             .container { height: 100%; margin: 0 auto; 
     display: flex;           /* establish flex container */
     flex-direction: column;  /* make main axis vertical */
@@ -27,9 +34,10 @@
             #draw { width: 100%; height: 100%; }
             #save { margin: 10px; font-size: 20px; line-height: 25px; }
 
-            #buttons { padding: 5%; position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: row; justify-content: center; align-items: center; text-align: center; }
+            #buttons { padding: 5%; position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: row; justify-content: center; align-items: center; text-align: center; background: rgba(0, 0, 0, 0.5); }
             .button  { display: inline-block; height: 100px; line-height: 100px; font-size: 40px; cursor: pointer; width: 300px; text-align: center; background: #ddd; color: #000; margin: 10px; }
             .button:hover { background: #fff; }
+            #playground-button { background: #ffa; }
         </style>
         <script type='text/javascript'>
             jQuery.event.special.touchstart = {
@@ -224,6 +232,7 @@
                     }
                 }
 
+                $('#buttons').on('touchstart mousedown', function (e) {e.stopPropagation();})
                 $("#bach-button").one('mousedown touchstart', function() {
                     audio_shader.resume();
                     setTimeout(() => {
@@ -234,7 +243,7 @@
                     }, 500);
                     $("#buttons").remove()
                 })
-                $("#pachabel-button").one('mousedown touchstart', function() {
+                $("#pachelbel-button").one('mousedown touchstart', function() {
                     audio_shader.resume();
                     window.pause = false;
                     set_midi_track(canon);
@@ -270,6 +279,9 @@
                     audio_shader.resume();
                     frame();
                     $("#buttons").remove()
+                })
+                $("#single-button").one('mousedown touchstart', function() {
+                    window.location = '/single.html'
                 })
 
 
@@ -369,15 +381,18 @@
     </head>
     <body>
         <div class='container'>
+            <div class='info'>The same simulation is used to calculate audio &amp; visuals. Plucking at different parts of the string produces different sounds, just like on a guitar.<br />Click or drag strings to play</div>
             <div id='draw'> </div>
             <div id="buttons">
                 <div>
                     <div class='button' id='chopin-button'>Chopin</div>
                     <div class='button' id='bach-button'>Bach</div>
-                    <div class='button' id='pachabel-button'>Pachabel</div>
+                    <div class='button' id='pachelbel-button'>Pachelbel</div>
                     <div class='button' id='satie-button'>Satie</div>
-                    <div class='button' id='harp1-button'>Harp 1</div>
+                    <!-- <div class='button' id='harp1-button'>Harp 1</div> -->
+                    <br />
                     <div class='button' id='playground-button'>Playground</div>
+                    <div class='button' id='single-button'>Single string</div>
                 </div>
             </div>
         </div>
