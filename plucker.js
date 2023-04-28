@@ -228,6 +228,8 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         }
 
         this.start_time = Date.now();
+        this.pluck_source = undefined;
+        this.hand_plucking = false;
 
         this.play_sound();
     }

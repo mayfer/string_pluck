@@ -4,12 +4,6 @@
         <title>string theory, the guitar kind</title>
         <meta charset='utf-8' />
         <link rel="shortcut icon" href="#">
-        <meta name="twitter:card" content="summary">
-        <meta name="twitter:site" content="@mayfer">
-        <meta name="twitter:title" content="string simulator">
-        <meta name="twitter:description" content="This is an interactive string simulator that uses basic Fourier math to generate audio & visuals according to where on the string you pluck from. The audio math is done on the GPU in WebGL">
-        <meta name="twitter:image" content="https://i.imgur.com/DvnQIif.png">
-
         <!-- libs -->
         <script type='text/javascript' src='jquery.min.js?1'></script>
         <script type='text/javascript' src='unmute.js?1'></script>
@@ -24,8 +18,7 @@
         <script type='text/javascript' src='midi/harp1.js'></script>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-            html, body { margin: 0; padding: 0; background: black; height:  100%; font-family: sans-serif; }
-            .info { position: absolute; top: 10px; left: 0; width: 100%; text-align: center; color: #888; padding: 10px; }
+            html, body { margin: 0; padding: 0; background: black; height:  100%; }
             .container { height: 100%; margin: 0 auto; 
     display: flex;           /* establish flex container */
     flex-direction: column;  /* make main axis vertical */
@@ -34,10 +27,9 @@
             #draw { width: 100%; height: 100%; }
             #save { margin: 10px; font-size: 20px; line-height: 25px; }
 
-            #buttons { padding: 5%; position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: row; justify-content: center; align-items: center; text-align: center; background: rgba(0, 0, 0, 0.5); }
+            #buttons { padding: 5%; position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: row; justify-content: center; align-items: center; text-align: center; }
             .button  { display: inline-block; height: 100px; line-height: 100px; font-size: 40px; cursor: pointer; width: 300px; text-align: center; background: #ddd; color: #000; margin: 10px; }
             .button:hover { background: #fff; }
-            #playground-button { background: #ffa; }
         </style>
         <script type='text/javascript'>
             jQuery.event.special.touchstart = {
@@ -91,19 +83,86 @@
                 //     });
                 // }
 
+                function noteToMidi(note) {
+                    const noteToNumber = {
+                        'C': 0,
+                        'C#': 1,
+                        'Db': 1,
+                        'D': 2,
+                        'D#': 3,
+                        'Eb': 3,
+                        'E': 4,
+                        'F': 5,
+                        'F#': 6,
+                        'Gb': 6,
+                        'G': 7,
+                        'G#': 8,
+                        'Ab': 8,
+                        'A': 9,
+                        'A#': 10,
+                        'Bb': 10,
+                        'B': 11
+                    };
+
+                    const octaveRegex = /(\d+)/;
+                    const noteRegex = /([A-Ga-g](#|b)?)/;
+                    
+                    const octaveMatch = note.match(octaveRegex);
+                    const noteMatch = note.match(noteRegex);
+
+                    if (!octaveMatch || !noteMatch) {
+                        throw new Error('Invalid note format.');
+                    }
+
+                    const octave = parseInt(octaveMatch[0]);
+                    const noteName = noteMatch[0].toUpperCase();
+
+                    const midiNumber = (octave + 1) * 12 + noteToNumber[noteName];
+                    return midiNumber;
+                }
+
+
                 let width = canvas_jq.width();
                 let height = canvas_jq.height();
                 let width_55hz = Math.min(width - 100, 500)
                 let midi_number_a1 = 33;
-                for(var i=0; i<num_strings; i++) {
+
+
+                
+                const midi_notes = [
+                    // notes of back cello suite 1:43,
+43,
+  50,
+  59,
+  57,
+  59,
+  50,
+  59,
+  50,
+  0,
+  43,
+  52,
+  60,
+  59,
+  60,
+  52,
+  60,
+  52,
+                ]
+                for(var i=0; i<midi_notes.length; i++) {
+                    const midi_number = midi_notes[i];
+                    if(midi_number == 0) continue;
+
+                    const note_offset = midi_number - midi_number_a1;
                     initial_strings.push({
-                        string_center: {x: width/2, y: 100 + (i+1) * ((height-200) / num_strings)},
+                        string_center: {x: width/2, y: 100 + (i) * ((height-200) / midi_notes.length)},
                         //string_width: Notes.relative_note(width_55hz, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
-                        string_width: Notes.relative_note(width_55hz*2, -i),
+                        string_width: Notes.relative_note(width_55hz*2, -note_offset),
                         angle: 0, // i * Math.PI / 64
-                        midi_number: midi_number_a1 + i,
+                        midi_number,
                     });
                 }
+                let auto_pluck_distance = height / midi_notes.length;
 
                 let audio_shader = new AudioShader(num_strings, num_overtones);
 
@@ -123,7 +182,7 @@
                         angle: string.angle,
                         duration,
                         audio: audio_shader,
-                        string_slack: Math.max(5, Math.min(30, string.string_width/5)),
+                        string_slack: auto_pluck_distance,
                     })
                     strings.push(drawWave);
                     midi_string_map[string.midi_number] = drawWave;
@@ -155,12 +214,6 @@
                 
                 let notes_map = {}
                 let notes_map_cursors = {}
-
-                async function set_remote_midi_track(url) {
-                    let midi_json = await fetch(url).then(r => r.json());
-                    set_midi_track(midi_json);
-                    debugger
-                }
                 
                 function set_midi_track(new_midi_track) {
                     midi_track = new_midi_track;    
@@ -237,169 +290,166 @@
                         }
                     }
                 }
-
-                // prevent pluck on first button
-                $('#buttons').on('touchstart mousedown', function (e) {e.stopPropagation();})
-                
-                // read query string from URL for midi file
-                let midi_file = new URLSearchParams(window.location.search).get('midi');
-                if(midi_file) {
-
-                    $("#buttons").html(`
-                        <div>
-                            <div class='button' id='remote-button'>Play midi</div>
-                        </div>
-                    `)
-                    $("#remote-button").one('mousedown touchstart', function() {
-                        audio_shader.resume();
-                        setTimeout(() => {
-                            window.pause = false;
-                            set_remote_midi_track(midi_file);
-                            frame();
-                        }, 500);
-                        $("#buttons").remove()
-                    })
-                }
-
-                $("#bach-button").one('mousedown touchstart', function() {
-                    audio_shader.resume();
-                    setTimeout(() => {
-                        window.pause = false;
-                        set_midi_track(bach);
-                        speed = 0.75;
-                        frame();
-                    }, 500);
-                    $("#buttons").remove()
-                })
-                $("#pachelbel-button").one('mousedown touchstart', function() {
-                    audio_shader.resume();
-                    window.pause = false;
-                    set_midi_track(canon);
-                    speed = 0.8
-                    frame();
-                    $("#buttons").remove()
-                })
-                $("#satie-button").one('mousedown touchstart', function() {
-                    audio_shader.resume();
-                    window.pause = false;
-                    set_midi_track(satie);
-                    speed = 1.3
-                    frame();
-                    $("#buttons").remove()
-                })
-                $("#chopin-button").one('mousedown touchstart', function() {
-                    audio_shader.resume();
-                    window.pause = false;
-                    set_midi_track(chopin);
-                    speed = 0.8
-                    frame();
-                    $("#buttons").remove()
-                })
-                $("#harp1-button").one('mousedown touchstart', function() {
-                    audio_shader.resume();
-                    window.pause = false;
-                    set_midi_track(harp1);
-                    speed = 1.5
-                    frame();
-                    $("#buttons").remove()
-                })
-                $("#playground-button").one('mousedown touchstart', function() {
-                    audio_shader.resume();
-                    frame();
-                    $("#buttons").remove()
-                })
+                window.started = false
                 $("#single-button").one('mousedown touchstart', function() {
-                    window.location = '/single.html'
+                    setTimeout(() => {
+                        window.started = true
+                    }, 100)
+                    audio_shader.resume();
+                    frame();
+                    $("#buttons").remove()
                 })
 
+                const touchInstances = {};
 
-                function click_or_touch_coordinates(e) {
-                    if(e.type == 'touchstart' || e.type == 'touchmove' || e.type == 'touchend' || e.type == 'touchcancel'){
-                        var touch = e.originalEvent.touches[0] || e.originalEvent.changedTouches[0];
-                        x = touch.pageX;
-                        y = touch.pageY;
-                    } else if (e.type == 'mousedown' || e.type == 'mouseup' || e.type == 'mousemove' || e.type == 'mouseover'|| e.type=='mouseout' || e.type=='mouseenter' || e.type=='mouseleave') {
-                        x = e.clientX;
-                        y = e.clientY;
-                    }
+                let canvas_offset = canvas_jq.offset();
+                let canvas_width = canvas_jq.width();
+                let canvas_height = canvas_jq.height();
 
-                    let offsetX = Math.min(Math.max(x - canvas_jq.offset().left, 10), canvas_jq.width()-10)
-                    let offsetY = Math.min(Math.max(y - canvas_jq.offset().top, 1), canvas_jq.height())
-                    return {offsetX, offsetY};
-                }
 
                 let always_pluck = false;
-                let prev_cursor;
+
+
+                let cursor_move_handler = function(touch) {
+                    const { id, x, y, prevX, prevY, startX, startY } = touch;
+                    const direction = { x: x - prevX, y: y - prevY };
+
+                    strings.forEach(string => {
+                        if(string.hand_plucking && string.pluck_source.id === id) {
+                            string.set_pluck_offsets(x, y)
+                        } else {
+                            if(always_pluck) {
+                                if(x > string.string_position.x && x < string.string_position.x + string.string_width && y > string.string_position.y - auto_pluck_distance && y < string.string_position.y + auto_pluck_distance) {
+
+                                    // if((startY >= string.string_position.y && direction.y < 0 && string.string_position.y > y) || (startY <= string.string_position.y && direction.y > 0 && string.string_position.y < y)) {
+                                    if(prevY >= string.string_position.y && y < string.string_position.y || prevY <= string.string_position.y && y > string.string_position.y) {
+                                        string.set_pluck_offsets(x, y);
+                                        string.hand_plucking = true;
+                                        string.pluck_source = touch;
+                                        string.stop_sound()
+                                    }
+
+                                }
+                            }
+                        }
+                    });
+                }
+                function handleClickOrTouchEvents(event) {
+                    if(!window.started) {
+                        return
+                    }
+                    event.preventDefault();
+                    event.stopPropagation();
+                    let eventType;
+                    let coordinates;
+
+                    switch (event.type) {
+                        case 'touchstart':
+                        case 'touchmove':
+                        case 'touchend':
+                            eventType = 'touch';
+                            coordinates = Array.from(event.changedTouches).map(touch => {
+                                const x = touch.clientX;
+                                const y = touch.clientY;
+                                let offsetX = Math.min(Math.max(x - canvas_offset.left, 10), canvas_width-10)
+                                let offsetY = Math.min(Math.max(y - canvas_offset.top, 1), canvas_height)
+                                return { id: touch.identifier, x, y }
+                            });
+                            break;
+                        case 'mousedown':
+                        case 'mousemove':
+                        case 'mouseup':
+                            eventType = 'mouse';
+                            coordinates = [{ id: 'mouse', x: event.clientX, y: event.clientY }];
+                            break;
+                        default:
+                            return;
+                    }
+
+                    for (const coordinate of coordinates) {
+                        const touch = touchInstances[coordinate.id];
+
+                        if (event.type === 'touchend' || event.type === 'mouseup') {
+                            if (touch) {
+                                touch.end = true;
+                            }
+                        } else {
+                            if (!touch) {
+                                touchInstances[coordinate.id] = {
+                                    id: coordinate.id,
+                                    prevX: coordinate.x,
+                                    prevY: coordinate.y,
+                                    x: coordinate.x,
+                                    y: coordinate.y,
+                                    startX: coordinate.x,
+                                    startY: coordinate.y,
+                                };
+                            } else {
+                                touch.prevX = touch.x;
+                                touch.prevY = touch.y;
+                                touch.x = coordinate.x;
+                                touch.y = coordinate.y;
+                            }
+                        }
+                    }
+
+                    if(event.type === 'touchstart' || event.type === 'mousedown') {
+                        Object.values(touchInstances).filter(ti => ti.x & ti.y).forEach(touch => {
+                            const { x, y } = touch;
+                            cursor_move_handler(touch);
+                            always_pluck = true;
+                        })
+                    }
+                    if(event.type === 'touchend' || event.type === 'mouseup') {
+                        Object.values(touchInstances).filter(ti => ti.end).forEach(touch => {
+                            strings.forEach(string => {
+                                if(string.hand_plucking && string.pluck_source && string.pluck_source.id === touch.id) {
+                                    string.pluck(touch.prevX, touch.prevY);
+                                }
+                            });
+                            delete touchInstances[touch.id];
+                        })
+
+                        if(Object.values(touchInstances).filter(ti => !ti.end).length === 0) {
+                            always_pluck = false;
+                        }
+                    }
+                    if(event.type === 'touchmove' || event.type === 'mousemove') {
+
+                        Object.values(touchInstances).filter(ti => ti.x && ti.y).forEach(touch => {
+                            const { x, y } = touch;
+                            const prev_cursor = touch.prevX && touch.prevY ? { x: touch.prevX, y: touch.prevY } : undefined;
+                            if(prev_cursor) {
+                                let distance = Math.sqrt(Math.pow(x - prev_cursor.x, 2) + Math.pow(y - prev_cursor.y, 2));
+                                if(distance > 5) {
+                                    let slices = Math.floor(distance / 5);
+                                    for(let i=1; i<=slices; i++) {
+                                        const interpolated_touch = {
+                                            ...touch,
+                                            x: prev_cursor.x + i*(x - prev_cursor.x)/slices,
+                                            y: prev_cursor.y + i*(y - prev_cursor.y)/slices
+                                        };
+                                        cursor_move_handler(interpolated_touch);
+                                    }
+                                }
+                            }
+                            cursor_move_handler(touch);
+                        })
+                    }
+
+                }
+
+                ['touchstart', 'touchmove', 'touchend', 'mousedown', 'mousemove', 'mouseup'].forEach(eventName => {
+                    document.addEventListener(eventName, handleClickOrTouchEvents, { passive: false });
+                });
+
 
                 $(window).blur(function(){
                     //strings.forEach(s => s.stop_sound());
                     //init()
                 });
 
-                let auto_pluck_distance = 5;
 
-                $(document).on('mousedown touchstart', (e) => {
-                    e.preventDefault();
-                    let {offsetX, offsetY} = click_or_touch_coordinates(e);
-                    prev_cursor = {x: offsetX, y: offsetY};
-
-                    strings.forEach(string => {
-                        if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - auto_pluck_distance && offsetY < string.string_position.y + auto_pluck_distance) {
-                            string.set_pluck_offsets(offsetX, offsetY);
-                            string.stop_sound()
-                            string.hand_plucking = true;
-                        }
-                    });
-                    always_pluck = true;
-                })
-
-                $(document).on('mouseup touchend', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    prev_cursor = null;
-                    let {offsetX, offsetY} = click_or_touch_coordinates(e);
-                    
-                    strings.forEach(string => {
-                        if(string.hand_plucking) {
-                            string.pluck(offsetX, offsetY)
-                            string.hand_plucking = false;
-                        }
-                    });
-                    
-                    always_pluck = false;
-                })
-
-                let cursor_move_handler = function(offsetX, offsetY) {
-                    strings.forEach(string => {
-                        if(always_pluck) {
-                            if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - auto_pluck_distance && offsetY < string.string_position.y + auto_pluck_distance) {
-
-                                string.set_pluck_offsets(offsetX, offsetY);
-                                string.hand_plucking = true;
-                                string.stop_sound()
-                            }
-                        }
-                        if(string.hand_plucking) {
-                            string.set_pluck_offsets(offsetX, offsetY)
-                        }
-                    });
-                }
-                $(document).on('mousemove touchmove', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    let {offsetX, offsetY} = click_or_touch_coordinates(e);
-                    if(prev_cursor) {
-                        let distance = Math.sqrt(Math.pow(offsetX - prev_cursor.x, 2) + Math.pow(offsetY - prev_cursor.y, 2));
-                        if(distance > 5) {
-                            let slices = Math.floor(distance / 5);
-                            for(let i=1; i<=slices; i++) {
-                                cursor_move_handler(prev_cursor.x + i*(offsetX - prev_cursor.x)/slices, prev_cursor.y + i*(offsetY - prev_cursor.y)/slices);
-                            }
-                        }
-                    }
-                    cursor_move_handler(offsetX, offsetY);
-                    prev_cursor = {x: offsetX, y: offsetY};
-                })
 
             });
 
@@ -409,18 +459,10 @@
     </head>
     <body>
         <div class='container'>
-            <div class='info'>The same simulation is used to calculate audio &amp; visuals. Plucking at different parts of the string produces different sounds, just like on a guitar.<br />Click or drag strings to play</div>
             <div id='draw'> </div>
             <div id="buttons">
                 <div>
-                    <div class='button' id='chopin-button'>Chopin</div>
-                    <div class='button' id='bach-button'>Bach</div>
-                    <div class='button' id='pachelbel-button'>Pachelbel</div>
-                    <div class='button' id='satie-button'>Satie</div>
-                    <!-- <div class='button' id='harp1-button'>Harp 1</div> -->
-                    <br />
-                    <div class='button' id='playground-button'>Playground</div>
-                    <div class='button' id='single-button'>Single string</div>
+                    <div class='button' id='single-button'>Start</div>
                 </div>
             </div>
         </div>
