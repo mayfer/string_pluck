@@ -11,11 +11,6 @@
         <script type='text/javascript' src='notes.js?1'></script>
         <script type='text/javascript' src='audio_shader.js?1'></script>
         <script type='text/javascript' src='plucker.js?1'></script>
-        <script type='text/javascript' src='chopin.js?1'></script>
-        <script type='text/javascript' src='midi/bach_cello.js'></script>
-        <script type='text/javascript' src='midi/canon.js'></script>
-        <script type='text/javascript' src='midi/satie.js'></script>
-        <script type='text/javascript' src='midi/harp1.js'></script>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
             html, body { margin: 0; padding: 0; background: black; height:  100%; }
@@ -128,7 +123,7 @@
                 let midi_number_a1 = 33;
 
 
-                
+                /* cello suite 1 
                 const midi_notes = [
                     // notes of back cello suite 1:43,
 43,
@@ -149,19 +144,96 @@
   60,
   52,
                 ]
-                for(var i=0; i<midi_notes.length; i++) {
-                    const midi_number = midi_notes[i];
-                    if(midi_number == 0) continue;
+                */
 
-                    const note_offset = midi_number - midi_number_a1;
-                    initial_strings.push({
-                        string_center: {x: width/2, y: 100 + (i) * ((height-200) / midi_notes.length)},
-                        //string_width: Notes.relative_note(width_55hz, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
-                        string_width: Notes.relative_note(width_55hz*2, -note_offset),
-                        angle: 0, // i * Math.PI / 64
-                        midi_number,
-                    });
+                // C, G, Am, F chords
+                const midi_notes = [
+                    // C major
+                    48,
+                    52,
+                    55,
+                    60,
+                    64,
+
+                    0,
+                    // G major
+                    55,
+                    59,
+                    62,
+                    67,
+                    71,
+                    0,
+                    // A minor
+                    57,
+                    60,
+                    64,
+                    69,
+                    72,
+
+                    0,
+                    // F major
+                    53,
+                    57,
+                    60,
+                    65,
+                    69,
+
+
+                ]
+
+                const num_chords = midi_notes.filter(n => n == 0).length+1;
+                const chunksize = 6;
+                const max_vertical = (height-200)/50;
+                const columns = 2
+                const rows = 2
+                const chord_areas = [];
+                let note_i = 0;
+                for(var i=0; i<columns; i++) {
+                    for(var j=0; j<rows; j++) {
+                        const x = 100 + i * (width-200) / columns;
+                        const y = 100 + j * (height-200) / rows;
+                        const w = (width-200) / columns;
+                        const h = (height-200) / rows;
+                        chord_areas.push({x, y, w, h});
+                        console.log(x, y, w, h);
+
+                        for(var k=0; k<chunksize; k++) {
+                            const midi_number = midi_notes[note_i];
+                            note_i++;
+                            if(midi_number == 0) continue;
+
+                            const center = (width/columns/4) * (i/columns) + x + w/2;
+                            const top = (height/rows/4) * (j/rows) + y + h/2 + (k - chunksize/2) * h/chunksize;
+
+                            const note_offset = midi_number - midi_number_a1;
+                            initial_strings.push({
+                                string_center: {x: center, y: top},
+                                //string_width: Notes.relative_note(width_55hz, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
+                                string_width: Notes.relative_note(width_55hz*2, -note_offset),
+                                angle: 0, // i * Math.PI / 64
+                                midi_number,
+                            });
+                        }
+                    }
                 }
+
+                // for(var i=0; i<midi_notes.length; i++) {
+                //     const midi_number = midi_notes[i];
+                //     if(midi_number == 0) continue;
+
+                //     const section = Math.floor(i/chunksize);
+                //     const center = width/2 + (section - chunksize/2) * width/chunksize;
+                //     const top = 100 + section * ((height-200)) + ;
+
+                //     const note_offset = midi_number - midi_number_a1;
+                //     initial_strings.push({
+                //         string_center: {x: center, y: top},
+                //         //string_width: Notes.relative_note(width_55hz, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
+                //         string_width: Notes.relative_note(width_55hz*2, -note_offset),
+                //         angle: 0, // i * Math.PI / 64
+                //         midi_number,
+                //     });
+                // }
                 let auto_pluck_distance = height / midi_notes.length;
 
                 let audio_shader = new AudioShader(num_strings, num_overtones);
@@ -299,6 +371,7 @@
                     frame();
                     $("#buttons").remove()
                 })
+
 
                 const touchInstances = {};
 
