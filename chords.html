@@ -312,10 +312,15 @@
                     let one_sec_ms = 1000 * (1/speed);
 
                     context.fillRect(0, 0, context.width, context.height);
+
                     strings.forEach(s => {
-                        if(s.playing) s.draw()
-                        else if(s.plucking) s.draw_pluck();
-                        else s.draw_still();
+                        if(s.playing) {
+                            s.draw()
+                        } else if(s.plucking) {
+                            s.draw_pluck();
+                        } else {
+                            s.draw_still();
+                        }
                     });
                     requestAnimationFrame(frame)
 
@@ -467,10 +472,10 @@
                     }
 
                     if(event.type === 'touchstart' || event.type === 'mousedown') {
+                        always_pluck = true;
                         Object.values(touchInstances).filter(ti => ti.x & ti.y).forEach(touch => {
                             const { x, y } = touch;
                             cursor_move_handler(touch);
-                            always_pluck = true;
                         })
                     }
                     if(event.type === 'touchend' || event.type === 'mouseup') {
@@ -483,7 +488,7 @@
                             delete touchInstances[touch.id];
                         })
 
-                        if(Object.values(touchInstances).filter(ti => !ti.end).length === 0) {
+                        if(Object.values(touchInstances).length === 0) {
                             always_pluck = false;
                         }
                     }

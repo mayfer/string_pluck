@@ -171,8 +171,7 @@ function AudioShader(num_strings, num_overtones) {
             for (let j = 0; j < num_overtones; j += 1) {
                 overtone_amplitudes[i * num_overtones + j] = 1 / (j+1);
 
-                let amp = 0//1 / (j+1);
-                let duration = 4;
+                let amp = 0;
                 let start_at = i;
                 let o_freq = s_freq * (j+1);
                 let prev_amp = 0;
@@ -214,6 +213,7 @@ function AudioShader(num_strings, num_overtones) {
             }
 
             this.blockOffset += 1;
+            this.wrap_blockOffset();
             // if(i * samples >= audioCtx.sampleRate * DURATION) {
             //     node.disconnect();
             // }
@@ -240,6 +240,22 @@ function AudioShader(num_strings, num_overtones) {
         };
         node.connect(audioCtx.destination);
         return node;
+    }
+
+    this.wrap_blockOffset = function() {
+        // this is to prevent blockOffset from growing too big
+        // and floating point errors causing static in the audio when
+        // the time value gets too large
+        const block_wrap_width = 64
+        if(this.blockOffset > block_wrap_width*2) {
+            this.blockOffset -= block_wrap_width;
+            for (let i = 0; i < num_strings; i++) {
+                for (let j = 0; j < num_overtones; j += 1) {
+                    this.overtones_texture[(i * num_overtones + j)*4 + 2] -= 64 * (buffer_size / audioCtx.sampleRate);
+                }
+            }
+            this.update_queued = true;
+        }
     }
 
 

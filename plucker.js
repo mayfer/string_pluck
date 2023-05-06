@@ -95,7 +95,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         let brightness = 0.1 + Math.pow((this.duration - this.time_diff)/this.duration, 4);
         let pluckness = Math.pow((this.duration - this.time_diff)/this.duration, 15) / 3;
         brightness = Math.max(0, Math.min(1, brightness));
-        context.strokeStyle = "rgba(255, 255, "+Math.floor((1-pluckness)*255)+", "+brightness+")"
+        context.strokeStyle = "rgba("+Math.floor((1-pluckness)*255)+", "+Math.floor((1-pluckness)*255)+", 255.0, "+brightness+")"
         context.translate(this.string_center.x, this.string_center.y);
         context.rotate(this.angle);
         context.translate(-this.string_center.x, -this.string_center.y);
