@@ -400,7 +400,8 @@
                                 if(x > string.string_position.x && x < string.string_position.x + string.string_width && y > string.string_position.y - auto_pluck_distance && y < string.string_position.y + auto_pluck_distance) {
 
                                     // if((startY >= string.string_position.y && direction.y < 0 && string.string_position.y > y) || (startY <= string.string_position.y && direction.y > 0 && string.string_position.y < y)) {
-                                    if(prevY >= string.string_position.y && y < string.string_position.y || prevY <= string.string_position.y && y > string.string_position.y) {
+                                        
+                                    if(prevY >= string.string_position.y && y < string.string_position.y || prevY <= string.string_position.y && y > string.string_position.y || Math.abs(y - string.string_position.y) < 5) {
                                         string.set_pluck_offsets(x, y);
                                         string.hand_plucking = true;
                                         string.pluck_source = touch;
