@@ -100,17 +100,18 @@ function AudioShader(num_strings, num_overtones) {
             float prev_amp = vals.w;
             float duration = 4.0;
             float ttime = time - start_time;
-            float block_progress = coord.x / u_resolution.x;
+            float block_progress = min(1.0, 2.0 * coord.x / u_resolution.x);
             float ramped_amp = prev_amp + (oamp - prev_amp) * (block_progress);
             // float overtone_amp = min(1.0, u_overtones[i * NUM_OVERTONES + j]);
             float overtone_amp = min(1.0, ramped_amp);
             if(ttime > 0.0 && ttime < duration) {
                 float damp = (1./((jj/3.)+1.)) * overtone_amp * amp * pow(1.0 - (ttime/duration), 4.0 * (jj+1.0));
-                if(damp > 0.00001) {
+
+                // if(damp > 0.00001) {
                     // to avoid beat patterns
                     float phase = 6.28318530718 * ii / num_strings_f;
                     sum += sine(ofreq, ttime + phase) * damp;
-                }
+                // }
             }
         }
     }
@@ -130,8 +131,10 @@ function AudioShader(num_strings, num_overtones) {
 
   let audioCtx
 
-  let buffer_size = 1024;
+  let buffer_size = 512;
   this.overtones_texture = new Float32Array(num_strings * num_overtones * 4);
+
+  this.vales_updated = false;
 
   let createAudio = (freq) => {
         audioCtx = new AudioContext();
@@ -218,7 +221,7 @@ function AudioShader(num_strings, num_overtones) {
             //     node.disconnect();
             // }
 
-            if(this.update_queued) {
+            // if(this.update_queued) {
 
                 gl.uniform1f(this.uniforms['u_overtones_texture'], this.overtones_texture);
                 gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, num_strings * num_overtones, 1, 0, gl.RGBA, gl.FLOAT, this.overtones_texture);
@@ -229,13 +232,15 @@ function AudioShader(num_strings, num_overtones) {
 
                         let prev_amp = this.overtones_texture[(i * num_overtones + j)*4 + 3];
                         let curr_amp = this.overtones_texture[(i * num_overtones + j)*4 + 1];
-                        if(prev_amp != curr_amp) {
+                        // if(prev_amp != curr_amp) {
+                            // console.log("prev amp", prev_amp, "curr amp", curr_amp);
                             this.overtones_texture[(i * num_overtones + j)*4 + 3] = curr_amp;
                             this.update_queued = true;
-                        }
+                        // }
                     }
                 }
-            }
+            // }
+            this.strings_updated_this_frame = {}
             
         };
         node.connect(audioCtx.destination);
@@ -269,20 +274,38 @@ function AudioShader(num_strings, num_overtones) {
         let { string } = message;
         let { id, overtones, duration, stopped } = string;
         
+        if(this.strings_updated_this_frame[id]) {
+            // console.log("values already updated for this frame", id);
+            // schedule it for next cycle so it doesn't crackle
+            return window.requestAnimationFrame(() => {
+                this.updateString(message);
+            })
+        }
+        this.strings_updated_this_frame[id] = true;
         let i = id;
-        for (let j = 0; j < num_overtones; j += 1) {
-            //let amp = stopped ? 0 : 1 / (j+1);
-            if(stopped) {
+        if(stopped) {
+            //let amp = stopped ? 0 : 1 / (j+1);2
+
+            for (let j = 0; j < num_overtones; j += 1) {
                 let prev_amp = this.overtones_texture[(i * num_overtones + j)*4 + 1];
+                if(j == 0) {
+                    console.log("stopped-"+id, prev_amp);
+                }
                 this.overtones_texture[(i * num_overtones + j)*4 + 3] = prev_amp;
                 this.overtones_texture[(i * num_overtones + j)*4 + 1] = 0;
-            } else {
+            }
+        } else {
+            for (let j = 0; j < num_overtones; j += 1) {
                 let duration = 4;
                 let start_at = this.blockOffset * buffer_size / audioCtx.sampleRate;
                 //let o_freq = s_freq * (j+1);
                 let ofreq = overtones[j].freq;
                 let oamp = overtones[j].amplitude;
                 let prev_amp = this.overtones_texture[(i * num_overtones + j)*4 + 1];
+                if(j == 0) {
+                    console.log("playing-"+id, prev_amp, oamp);
+                }
+
                 this.overtones_texture[(i * num_overtones + j)*4 + 3] = prev_amp;
                 this.overtones_texture[(i * num_overtones + j)*4] = ofreq;
                 this.overtones_texture[(i * num_overtones + j)*4 + 1] = oamp;
