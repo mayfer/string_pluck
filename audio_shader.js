@@ -89,7 +89,7 @@ function AudioShader(num_strings, num_overtones) {
     
     for (int i = 0; i < NUM_STRINGS; i++) {
         float ii = float(i);
-        float amp = sqrt(2.0 / (ii/2. + 1.0)) / (num_strings_f / 10.0);
+        float amp = sqrt(2.0 / (ii/2. + 1.0)) / (num_strings_f / 4.0);
         
         for(int j = 0; j < NUM_OVERTONES; j++) {
             float jj = float(j);
@@ -198,6 +198,7 @@ function AudioShader(num_strings, num_overtones) {
         console.log("Max fragment uniform vectors", gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS));
         
         this.blockOffset = 0;
+        this.strings_updated_this_frame = {}
         node.onaudioprocess = (e) => {
             //gl.useProgram(program);
             //const uniforms = getUniformLocations(gl, program, ['u_sampleRate', 'u_blockOffset', 'u_resolution']);

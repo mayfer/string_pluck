@@ -68,7 +68,7 @@
 
                 let duration = 5000;
                 let string_y = 150;
-                let num_strings = 72;
+                let num_strings = 30;
                 let num_overtones = 15;
                 
                 var overtone_freqs = Array.from({length: num_overtones}, (_, i) => (i+1) * 110);
@@ -101,7 +101,7 @@
                         string_center: {x: width/2, y: 100 + (i+1) * ((height-200) / num_strings)},
                         //string_width: Notes.relative_note(width_55hz, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
                         string_width: Notes.relative_note(width_55hz*2, -i),
-                        angle: 0, // i * Math.PI / 64
+                        angle: 10, // i * Math.PI / 64
                         midi_number: midi_number_a1 + i,
                     });
                 }
@@ -279,9 +279,15 @@
                     let {offsetX, offsetY} = click_or_touch_coordinates(e);
                     prev_cursor = {x: offsetX, y: offsetY};
 
+                    
                     strings.forEach(string => {
-                        if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - auto_pluck_distance && offsetY < string.string_position.y + auto_pluck_distance) {
-                            string.set_pluck_offsets(offsetX, offsetY);
+                        // rotate x and y around string center by string.angle
+                        const startPos = rotate_coordinates_for_string(string, string.string_position.x, string.string_position.y);
+                        const endPos = rotate_coordinates_for_string(string, string.string_position.x + string.string_width, string.string_position.y);
+
+                        if(offsetX > startPos.x && offsetX < endPos.x && offsetY > startPos.y - auto_pluck_distance && offsetY < startPos.y + auto_pluck_distance) {
+                            const angledOffset = rotate_coordinates_for_string(string, offsetX, offsetY);
+                            string.set_pluck_offsets(angledOffset.x - string.string_center.x, angledOffset.y - string.string_center.y);
                             string.stop_sound()
                             string.hand_plucking = true;
                         }
@@ -297,7 +303,8 @@
                     
                     strings.forEach(string => {
                         if(string.hand_plucking) {
-                            string.pluck(offsetX, offsetY)
+                            const angledOffset = rotate_coordinates_for_string(string, offsetX, offsetY);
+                            string.pluck(angledOffset.x, angledOffset.y);
                             string.hand_plucking = false;
                         }
                     });
@@ -305,18 +312,30 @@
                     always_pluck = false;
                 })
 
+                rotate_coordinates_for_string = function(string, offsetX, offsetY) {
+                    return {
+                        x: string.string_center.x + (offsetX - string.string_center.x) * Math.cos(-string.angle) - (offsetY - string.string_center.y) * Math.sin(-string.angle),
+                        y: string.string_center.y + (offsetX - string.string_center.x) * Math.sin(-string.angle) + (offsetY - string.string_center.y) * Math.cos(-string.angle),
+                    }
+                }
+
                 let cursor_move_handler = function(offsetX, offsetY) {
                     strings.forEach(string => {
+                        // rotate offsetX and offsetY around string center by string.angle
+                        const angledOffset = rotate_coordinates_for_string(string, offsetX, offsetY);
+                        const angledOffsetX = angledOffset.x;
+                        const angledOffsetY = angledOffset.y;
                         if(always_pluck) {
-                            if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - auto_pluck_distance && offsetY < string.string_position.y + auto_pluck_distance) {
+                            const angledOffset = rotate_coordinates_for_string(string, offsetX, offsetY);
+                            if(angledOffset.x > string.string_position.x && angledOffset.x < string.string_position.x + string.string_width && angledOffset.y > string.string_position.y - auto_pluck_distance && angledOffset.y < string.string_position.y + auto_pluck_distance) {
 
-                                string.set_pluck_offsets(offsetX, offsetY);
+                                string.set_pluck_offsets(angledOffsetX, angledOffsetY);
                                 string.hand_plucking = true;
                                 string.stop_sound()
                             }
                         }
                         if(string.hand_plucking) {
-                            string.set_pluck_offsets(offsetX, offsetY)
+                            string.set_pluck_offsets(angledOffsetX, angledOffsetY)
                         }
                     });
                 }
