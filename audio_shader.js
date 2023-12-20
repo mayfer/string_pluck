@@ -131,7 +131,7 @@ function AudioShader(num_strings, num_overtones) {
 
   let audioCtx
 
-  let buffer_size = 512;
+  let buffer_size = 1024;
   this.overtones_texture = new Float32Array(num_strings * num_overtones * 4);
 
   this.vales_updated = false;
