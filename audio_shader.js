@@ -154,6 +154,7 @@ function AudioShader(num_strings, num_overtones) {
         console.log("Extension", ext);
 
         const program = createProgramFromSource(gl, VERTEX_SHADER, FRAGMENT_SHADER);
+        this.program = program;
         const samples = WIDTH * HEIGHT;
 
         this.uniforms = getUniformLocations(gl, program, ['u_sampleRate', 'u_blockOffset', 'u_resolution', 'u_freq', 'u_overtones']);
@@ -244,6 +245,13 @@ function AudioShader(num_strings, num_overtones) {
             
         };
         node.connect(audioCtx.destination);
+
+        window.addEventListener('keydown', (e) => {
+            if(e.key == " ") {
+                this.destroy();
+            }
+        });
+
         return node;
     }
 
@@ -288,9 +296,6 @@ function AudioShader(num_strings, num_overtones) {
 
             for (let j = 0; j < num_overtones; j += 1) {
                 let prev_amp = this.overtones_texture[(i * num_overtones + j)*4 + 1];
-                if(j == 0) {
-                    console.log("stopped-"+id, prev_amp);
-                }
                 this.overtones_texture[(i * num_overtones + j)*4 + 3] = prev_amp;
                 this.overtones_texture[(i * num_overtones + j)*4 + 1] = 0;
             }
@@ -302,9 +307,6 @@ function AudioShader(num_strings, num_overtones) {
                 let ofreq = overtones[j].freq;
                 let oamp = overtones[j].amplitude;
                 let prev_amp = this.overtones_texture[(i * num_overtones + j)*4 + 1];
-                if(j == 0) {
-                    console.log("playing-"+id, prev_amp, oamp);
-                }
 
                 this.overtones_texture[(i * num_overtones + j)*4 + 3] = prev_amp;
                 this.overtones_texture[(i * num_overtones + j)*4] = ofreq;
@@ -319,6 +321,12 @@ function AudioShader(num_strings, num_overtones) {
         if(audioCtx.state === 'suspended') {
             audioCtx.resume();
         }
+    }
+
+    this.destroy = function() {
+        audioCtx.close();
+        // destroy shaders
+        gl.deleteProgram(this.program);
     }
 
     return this
