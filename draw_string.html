@@ -39,6 +39,7 @@
             .button  { display: inline-block; height: 50px; line-height: 50px; font-size: 40px; cursor: pointer; width: 300px; text-align: center; background: #ddd; color: #000; margin: 10px; }
             .button:hover { background: #fff; }
             #playground-button { background: #ffa; }
+            .draw-mode-button { position: absolute; bottom: 10px; left: 10px; padding: 10px; background: #fff; color: #000; cursor: pointer; }
         </style>
         <script type='text/javascript'>
             jQuery.event.special.touchstart = {
@@ -61,20 +62,14 @@
                     this.addEventListener("mousewheel", handle, { passive: false });
                 }
             };
-            $(document).ready(function() {
 
-                // create a drawing area inside an element
-                var canvas_jq = new Canvas($('#draw'));
-
-                let duration = 5000;
-                let string_y = 150;
-                let num_strings = 30;
-                let num_overtones = 15;
+            let midi_string_map = {};
+            let midi_number_a1 = 33;
                 
-                var overtone_freqs = Array.from({length: num_overtones}, (_, i) => (i+1) * 110);
-                var overtones = overtone_freqs.map(freq => { return {freq, amplitude: 1} });
+            let pluckableStrings = [];
 
-
+            const getInitialStrings = (canvas_jq) => {
+                let num_strings = 56
                 let initial_strings = []
 
                 // for(var i=0; i<=40; i++) {
@@ -95,40 +90,84 @@
                 let width = canvas_jq.width();
                 let height = canvas_jq.height();
                 let width_55hz = Math.min(width - 100, 500)
-                let midi_number_a1 = 33;
+                const total_angle = Math.PI * 2;
                 for(var i=0; i<num_strings; i++) {
                     initial_strings.push({
-                        string_center: {x: width/2, y: 100 + (i+1) * ((height-200) / num_strings)},
+                        string_center: {
+                            x:  (width/3) * Math.sin((total_angle * i / num_strings)) + width/2,
+                            y:  (height/3) * Math.cos((total_angle * i / num_strings)) + height/2,
+                        },
+                        // string_center: {x: width/2, y: 100 + (i+1) * ((height-200) / num_strings)},
                         //string_width: Notes.relative_note(width_55hz, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
                         string_width: Notes.relative_note(width_55hz*2, -i),
-                        angle: 10, // i * Math.PI / 64
-                        midi_number: midi_number_a1 + i,
+                        angle: Math.PI * (3/4) + i * total_angle / num_strings,
                     });
                 }
 
-                let audio_shader = new AudioShader(num_strings, num_overtones);
+                return initial_strings;
+            }
+            const resetAndAddStrings = function(canvas_jq, audioShader, strings, options={skip_audio: false}) {
+                midi_string_map = {};
+                let width = canvas_jq.width();
+                let height = canvas_jq.height();
+                let width_55hz = Math.min(width - 100, 500)
 
-                let audio_node = audio_shader.setup_audio();
+                let duration = 5000;
 
+                const num_strings = 72;
+                const num_overtones = 15;
 
-                let strings = [];
-                let midi_string_map = {};
+                if(!options.skip_audio) {
+                    if(audioShader) {
+                        audioShader.destroy();
+                    }
+                    audioShader = new AudioShader(num_strings, num_overtones);
+                    audioShader.setup_audio();
+                    audioShader.resume();
+                }
 
-                for(let string of initial_strings) {
+                pluckableStrings.length = 0;
+
+                for(let i=0; i<strings.length; i++) {
+                    const string = strings[i];
+                    const overtones = [];
+                    const base_freq = 110;
+                    let freq = parseInt(base_freq * width_55hz/string.string_width);
+                    for(let j=0; j<num_overtones; j++) {
+                        overtones.push({freq: (j+1) * freq, amplitude: 1});
+                    }
                     var drawWave = new pluckableString({
+                        id: i,
                         canvas: canvas_jq.get(0),
-                        overtones: overtones.map((o, i) => { return {freq: parseInt(overtones[0].freq * width_55hz/string.string_width) * (i+1), amplitude: o.amplitude } }),
+                        overtones,
                         wave_height: 50,
                         string_width: string.string_width,
                         string_center: string.string_center,
+                        midi_number: string.midi_number,
                         angle: string.angle,
                         duration,
-                        audio: audio_shader,
-                        string_slack: Math.max(5, Math.min(30, string.string_width/5)),
+                        audio: audioShader,
+                        string_slack: Math.max(5, Math.min(40, string.string_width/5)),
                     })
-                    strings.push(drawWave);
+                    pluckableStrings.push(drawWave);
                     midi_string_map[string.midi_number] = drawWave;
                 }
+
+                pluckableStrings.forEach(s => s.draw_still());
+
+                return { audioShader };
+
+            }
+            $(document).ready(function() {
+
+                // create a drawing area inside an element
+                var canvas_jq = new Canvas($('#draw'));
+
+                let width = canvas_jq.width();
+                let height = canvas_jq.height();
+                let width_55hz = Math.min(width - 100, 500)
+
+                const initial_strings = getInitialStrings(canvas_jq);
 
                 var canvas = canvas_jq.get(0);
                 var context = canvas.getContext("2d");
@@ -137,11 +176,97 @@
                 context.lineWidth = 2;
                 context.strokeStyle = "#fff";
 
+                let { audioShader } = resetAndAddStrings(canvas_jq, null, initial_strings);
 
-                function init() {
-                    strings.forEach(s => s.draw_still());
+
+                let drawing_mode = false;
+                let draw_start = null
+                let draw_end = null
+
+                // if touch device
+                const button = document.createElement('div');
+                button.classList.add('draw-mode-button');
+                button.innerText = 'Draw mode';
+                document.body.appendChild(button);
+                $(button).on('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    window.requestAnimationFrame(() => {
+                        if(drawing_mode) {
+                            stop_drawing();
+                        } else {
+                            start_drawing();
+                        }
+                    })
+                })
+
+                function start_drawing() {
+                    drawing_mode = true;
+                    button.innerText = 'Stop drawing';
                 }
-                init()
+                function stop_drawing() {
+                    drawing_mode = false;
+                    button.innerText = 'Enter draw mode';
+                }
+
+                document.addEventListener('keydown', (e) => {
+                    e.preventDefault();
+                    if(e.key == " ") {
+                        console.log("reset")
+                        let { audioShader: newAudioShader } = resetAndAddStrings(canvas_jq, audioShader, []);
+                        audioShader = newAudioShader;
+                    }
+                })
+
+                canvas_jq.on('mousedown touchstart', (e) => {
+                    // shift
+                    if(drawing_mode) {
+                        const {offsetX, offsetY} = click_or_touch_coordinates(e);
+                        draw_start = {x: offsetX, y: offsetY};
+                        draw_end = {x: offsetX, y: offsetY};
+                    }
+                    // drawing_mode = true;
+                })
+
+                function finish_drawing_string() {
+                    if(drawing_mode && draw_start) {
+                        let offsetStart = draw_start;
+                        let offsetEnd = draw_end;
+                        let string_center = {x: offsetStart.x + (offsetEnd.x - offsetStart.x)/2, y: offsetStart.y + (offsetEnd.y - offsetStart.y)/2};
+
+                        const string_width = Math.sqrt(Math.pow(offsetEnd.x - offsetStart.x, 2) + Math.pow(offsetEnd.y - offsetStart.y, 2))
+                        let string = {
+                            string_center,
+                            string_width,
+                            angle: Math.atan2(offsetEnd.y - offsetStart.y, offsetEnd.x - offsetStart.x),
+                        }
+
+                        let newStrings = pluckableStrings.map(s => { return {string_center: s.string_center, string_width: s.string_width, angle: s.angle, midi_number: s.midi_number} }).concat([string]);
+
+                        
+                        let { audioShader: newAudioShader } = resetAndAddStrings(canvas_jq, audioShader, newStrings, {skip_audio: shift_pressed});
+                        audioShader = newAudioShader;
+                        
+                        if(!shift_pressed) {
+                            stop_drawing();
+                        }
+                    }
+
+                    draw_start = null
+                    draw_end = null
+                }
+                canvas_jq.on('mouseup touchend', (e) => {
+                    finish_drawing_string();
+                })
+                $(document).on('mousemove touchmove', (e) => {
+                    if(drawing_mode && draw_start) {
+                        const offset = click_or_touch_coordinates(e);
+                        draw_end.y = offset.offsetY;
+                        draw_end.x = offset.offsetX;
+                    }
+                })
+
 
                 
                 let start;
@@ -188,7 +313,7 @@
                     let one_sec_ms = 1000 * (1/speed);
 
                     context.fillRect(0, 0, context.width, context.height);
-                    strings.forEach(s => {
+                    pluckableStrings.forEach(s => {
                         if(s.playing) s.draw()
                         else if(s.plucking) s.draw_pluck();
                         else s.draw_still();
@@ -237,13 +362,21 @@
                             }
                         }
                     }
+
+                    if(drawing_mode && draw_start && draw_end) {
+                        context.strokeStyle = "#ffa";
+                        context.beginPath();
+                        context.moveTo(draw_start.x, draw_start.y);
+                        context.lineTo(draw_end.x, draw_end.y);
+                        context.stroke();
+                    }
                 }
 
                 // prevent pluck on first button
                 $('#buttons').on('touchstart mousedown', function (e) {e.stopPropagation();})
                 
                 $("#draw-mode-button").one('mousedown touchstart', function() {
-                    audio_shader.resume();
+                    audioShader.resume();
                     frame();
                     $("#buttons").remove()
                 })
@@ -274,34 +407,51 @@
 
                 let auto_pluck_distance = 5;
 
-                $(document).on('mousedown touchstart', (e) => {
+                let shift_pressed = false;
+                $(document).on('keydown', (e) => {
+                    if(e.shiftKey) {
+                        start_drawing();
+                        shift_pressed = true;
+                    }
+                })
+                $(document).on('keyup', (e) => {
+                    if(shift_pressed) {
+                        shift_pressed = false;
+                        finish_drawing_string();
+                        stop_drawing();
+                    }
+                })
+
+                $(canvas_jq).on('mousedown touchstart', (e) => {
                     e.preventDefault();
+                    if(drawing_mode) {
+                        return;
+                    }
                     let {offsetX, offsetY} = click_or_touch_coordinates(e);
                     prev_cursor = {x: offsetX, y: offsetY};
 
-                    
-                    strings.forEach(string => {
-                        // rotate x and y around string center by string.angle
-                        const startPos = rotate_coordinates_for_string(string, string.string_position.x, string.string_position.y);
-                        const endPos = rotate_coordinates_for_string(string, string.string_position.x + string.string_width, string.string_position.y);
-
-                        if(offsetX > startPos.x && offsetX < endPos.x && offsetY > startPos.y - auto_pluck_distance && offsetY < startPos.y + auto_pluck_distance) {
-                            const angledOffset = rotate_coordinates_for_string(string, offsetX, offsetY);
-                            string.set_pluck_offsets(angledOffset.x - string.string_center.x, angledOffset.y - string.string_center.y);
-                            string.stop_sound()
+                    pluckableStrings.forEach(string => {
+                        if(offsetX > string.string_position.x && offsetX < string.string_position.x + string.string_width && offsetY > string.string_position.y - auto_pluck_distance && offsetY < string.string_position.y + auto_pluck_distance) {
+                            string.set_pluck_offsets(offsetX, offsetY);
                             string.hand_plucking = true;
+                            string.stop_sound()
                         }
                     });
+                    cursor_move_handler(offsetX, offsetY);
+
+                    
                     always_pluck = true;
                 })
 
-                $(document).on('mouseup touchend', (e) => {
+                $(canvas_jq).on('mouseup touchend', (e) => {
                     e.preventDefault();
-                    e.stopPropagation();
+                    if(drawing_mode) {
+                        return;
+                    }
                     prev_cursor = null;
                     let {offsetX, offsetY} = click_or_touch_coordinates(e);
                     
-                    strings.forEach(string => {
+                    pluckableStrings.forEach(string => {
                         if(string.hand_plucking) {
                             const angledOffset = rotate_coordinates_for_string(string, offsetX, offsetY);
                             string.pluck(angledOffset.x, angledOffset.y);
@@ -320,7 +470,7 @@
                 }
 
                 let cursor_move_handler = function(offsetX, offsetY) {
-                    strings.forEach(string => {
+                    pluckableStrings.forEach(string => {
                         // rotate offsetX and offsetY around string center by string.angle
                         const angledOffset = rotate_coordinates_for_string(string, offsetX, offsetY);
                         const angledOffsetX = angledOffset.x;
@@ -340,6 +490,9 @@
                     });
                 }
                 $(document).on('mousemove touchmove', (e) => {
+                    if(drawing_mode) {
+                        return;
+                    }
                     e.preventDefault();
                     e.stopPropagation();
                     let {offsetX, offsetY} = click_or_touch_coordinates(e);

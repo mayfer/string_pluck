@@ -165,5 +165,5 @@ Notes = {
       halftones = 1;
     }
     return Math.exp(Math.log(freq) + Notes.HALFTONE_LOG*halftones);
-  }
+  },
 }

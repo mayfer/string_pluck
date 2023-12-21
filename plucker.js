@@ -1,11 +1,9 @@
 X_INCREMENT = 5;
 
-let auto_increment = 0;
-
-function pluckableString({canvas, overtones, wave_height, string_width, string_center, angle, duration, audio, string_slack}) {
+function pluckableString({id, canvas, overtones, wave_height, string_width, string_center, midi_number, angle, duration, audio, string_slack}) {
     this.audio = audio;
     this.overtones = overtones; // {freq, amplitude}
-    this.id = auto_increment++;
+    this.id = id;
 
     this.context = canvas.getContext("2d");
     this.wave_height = wave_height;
@@ -20,6 +18,8 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
     this.string_width = string_width;
     this.string_position = {x: string_center.x - string_width/2, y: string_center.y};
     this.string_height = wave_height;
+
+    this.midi_number = midi_number;
 
     this.base_freq = overtones[0].freq;
     this.string_slack = string_slack ||  30;
@@ -55,7 +55,7 @@ function pluckableString({canvas, overtones, wave_height, string_width, string_c
         let standing = Math.PI / this.string_width;
         let relative_freq = standing * freq / this.base_freq;
         
-        let speed_adjustment = Math.sqrt(this.overtones[0].freq / 220) * (freq / this.base_freq) / 14;
+        let speed_adjustment = Math.sqrt(this.overtones[0].freq / 220) * (freq / this.base_freq) / 18;
         
         let phase = 0;
         
