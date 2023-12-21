@@ -244,8 +244,10 @@
                 let strings = [];
                 let midi_string_map = {};
 
-                for(let string of initial_strings) {
+                for(var i=0; i<initial_strings.length; i++) {
+                    let string = initial_strings[i];
                     var drawWave = new pluckableString({
+                        id: i,
                         canvas: canvas_jq.get(0),
                         overtones: overtones.map((o, i) => { return {freq: parseInt(overtones[0].freq * width_55hz/string.string_width) * (i+1), amplitude: o.amplitude } }),
                         wave_height: 50,

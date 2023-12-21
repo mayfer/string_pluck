@@ -6,6 +6,7 @@ function pluckableString({id, canvas, overtones, wave_height, string_width, stri
     this.id = id;
 
     this.context = canvas.getContext("2d");
+    this.context.lineWidth = 5;
     this.wave_height = wave_height;
     this.wave_halfheight = this.wave_height / 2;
     this.center = this.wave_halfheight;
