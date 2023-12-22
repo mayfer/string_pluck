@@ -17,6 +17,9 @@ function AudioShader(num_strings, num_overtones) {
         const program = gl.createProgram();
         gl.attachShader(program, vertexShader);
         gl.attachShader(program, fragmentShader);
+
+        gl.bindAttribLocation(program, 0, 'a_dummy'); // for performance? firefox warned me
+
         gl.linkProgram(program);
         if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
             throw new Error(gl.getProgramInfoLog(program));
@@ -150,7 +153,7 @@ function AudioShader(num_strings, num_overtones) {
         canvas.height = HEIGHT;
         gl = canvas.getContext('webgl2');
         const ext = gl.getExtension('EXT_color_buffer_float');
-        console.log("Extension", ext);
+        // console.log("Extension", ext);
 
         const program = createProgramFromSource(gl, VERTEX_SHADER, FRAGMENT_SHADER);
         this.program = program;
@@ -165,14 +168,13 @@ function AudioShader(num_strings, num_overtones) {
         const overtone_amplitudes = new Float32Array(num_strings * num_overtones);
         gl.uniform1f(this.uniforms['u_num_strings'], num_strings);
         gl.uniform1f(this.uniforms['u_num_overtones'], num_overtones);
-
-
+        
         let base_freq = 55;
         for (let i = 0; i < num_strings; i++) {
             let s_freq = Math.exp(Math.log(base_freq) + 0.05776226504666212 * i);
             for (let j = 0; j < num_overtones; j += 1) {
                 overtone_amplitudes[i * num_overtones + j] = 1 / (j + 1);
-
+                
                 let amp = 0;
                 let start_at = i;
                 let o_freq = s_freq * (j + 1);
@@ -182,19 +184,19 @@ function AudioShader(num_strings, num_overtones) {
                 this.overtones_texture[(i * num_overtones + j) * 4 + 2] = start_at;
                 this.overtones_texture[(i * num_overtones + j) * 4 + 3] = prev_amp;
             }
-
+            
         }
         gl.uniform1fv(this.uniforms['u_overtones'], overtone_amplitudes);
-
+        
         var texture = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, overtone_amplitudes.length, 1, 0, gl.RGBA, gl.FLOAT, this.overtones_texture);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         gl.uniform1f(this.uniforms['u_overtones_texture'], this.overtones_texture);
-
-        console.log("Max fragment uniform vectors", gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS));
-
+        
+        // console.log("Max fragment uniform vectors", gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS));
+        
         this.blockOffset = 0;
         this.strings_updated_this_frame = {}
         node.onaudioprocess = (e) => {
@@ -204,8 +206,8 @@ function AudioShader(num_strings, num_overtones) {
             const pixels = new Uint8Array(WIDTH * HEIGHT * 4);
             const outputL = e.outputBuffer.getChannelData(0);
             const outputR = e.outputBuffer.getChannelData(1);
-
-
+            
+            
             gl.uniform1f(this.uniforms['u_blockOffset'], this.blockOffset * samples / this.audioCtx.sampleRate);
             gl.drawArrays(gl.TRIANGLES, 0, 6);
             gl.readPixels(0, 0, WIDTH, HEIGHT, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
@@ -265,7 +267,6 @@ function AudioShader(num_strings, num_overtones) {
     }
 
     this.updateString = function (message) {
-        this.resume();
         let { string } = message;
         let { id, overtones, duration, stopped } = string;
 
