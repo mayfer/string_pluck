@@ -115,7 +115,7 @@
 
                 let duration = 5000;
 
-                const num_strings = 50;
+                const num_strings = Math.max(strings.length, 10);
                 const num_overtones = 12;
 
                 if(!options.skip_audio) {
@@ -160,7 +160,15 @@
 
             }
             $(document).ready(function() {
-
+                // on blur, go into idle
+                // on focus, resume
+                window.idle = false;
+                $(window).blur(function(){
+                    window.idle = true;
+                });
+                $(window).focus(function(){
+                    window.idle = false;
+                });
                 // create a drawing area inside an element
                 var canvas_jq = new Canvas($('#draw'));
 
@@ -203,13 +211,12 @@
 
                 function start_drawing() {
                     drawing_mode = true;
-                    shift_pressed = true;
                     button.innerText = 'Stop drawing';
                 }
                 function stop_drawing() {
                     drawing_mode = false;
-                    shift_pressed = false;
                     button.innerText = 'Enter draw mode';
+                    finish_drawing_string();
                 }
 
                 document.addEventListener('keydown', (e) => {
@@ -221,19 +228,9 @@
                     }
                 })
 
-                canvas_jq.on('mousedown touchstart', (e) => {
-                    e.preventDefault();
-                    // shift
-                    if(drawing_mode) {
-                        console.log("start drawing")
-                        const {offsetX, offsetY} = click_or_touch_coordinates(e);
-                        draw_start = {x: offsetX, y: offsetY};
-                        draw_end = {x: offsetX, y: offsetY};
-                    }
-                    // drawing_mode = true;
-                })
-
                 function finish_drawing_string() {
+                    let newStrings = pluckableStrings.map(s => { return {string_center: s.string_center, string_width: s.string_width, angle: s.angle, midi_number: s.midi_number} });
+
                     if(drawing_mode && draw_start) {
                         let offsetStart = draw_start;
                         let offsetEnd = draw_end;
@@ -246,21 +243,29 @@
                             angle: Math.atan2(offsetEnd.y - offsetStart.y, offsetEnd.x - offsetStart.x),
                         }
 
-                        let newStrings = pluckableStrings.map(s => { return {string_center: s.string_center, string_width: s.string_width, angle: s.angle, midi_number: s.midi_number} }).concat([string]);
-
-                        
-                        let { audioShader: newAudioShader } = resetAndAddStrings(canvas_jq, audioShader, newStrings, {skip_audio: shift_pressed});
-                        audioShader = newAudioShader;
-                        audioShader.resume();
+                        newStrings.push(string);
                     }
-
-                    draw_start = null
-                    draw_end = null
+                    
+                    let { audioShader: newAudioShader } = resetAndAddStrings(canvas_jq, audioShader, newStrings, {skip_audio: drawing_mode});
+                    audioShader = newAudioShader;
                 }
+
+                canvas_jq.on('mousedown touchstart', (e) => {
+                    e.preventDefault();
+
+                    if(drawing_mode) {
+                        const {offsetX, offsetY} = click_or_touch_coordinates(e);
+                        draw_start = {x: offsetX, y: offsetY};
+                        draw_end = {x: offsetX, y: offsetY};
+                    }
+                })
                 canvas_jq.on('mouseup touchend', (e) => {
                     e.preventDefault();
-                    shift_pressed = false;
-                    finish_drawing_string();
+                    if(drawing_mode && draw_start) {
+                        finish_drawing_string();
+                        draw_start = null
+                        draw_end = null
+                    }
                 })
                 $(document).on('mousemove touchmove', (e) => {
                     if(drawing_mode && draw_start) {
@@ -308,6 +313,10 @@
                 let last_frame_time;
 
                 let frame = () => {
+                    requestAnimationFrame(frame)
+                    if(window.idle) {
+                        return;
+                    }
                     if(last_frame_time && Date.now() - last_frame_time > 1000) {
                         window.pause = true
                     }
@@ -321,7 +330,6 @@
                         else if(s.plucking) s.draw_pluck();
                         else s.draw_still();
                     });
-                    requestAnimationFrame(frame)
 
                     if(!start) {
                         start = Date.now();
@@ -416,16 +424,13 @@
 
                 let auto_pluck_distance = 5;
 
-                let shift_pressed = false;
                 $(document).on('keydown', (e) => {
                     if(e.shiftKey) {
                         start_drawing();
-                        shift_pressed = true;
                     }
                 })
                 $(document).on('keyup', (e) => {
-                    if(shift_pressed) {
-                        shift_pressed = false;
+                    if(drawing_mode) {
                         finish_drawing_string();
                         stop_drawing();
                     }
@@ -488,7 +493,20 @@
                     });
                 }
                 
+                let idle_timeout;
+
+                window.idle = false;
                 function handleClickOrTouchEvents(event) {
+
+                    if(idle_timeout) {
+                        clearTimeout(idle_timeout);
+                        window.idle = false;
+                    }
+                    idle_timeout = setTimeout(() => {
+                        window.idle = true;
+                    }, 3000);
+
+
                     if(drawing_mode) {
                         return;
                     }

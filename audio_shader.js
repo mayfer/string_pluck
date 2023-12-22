@@ -86,32 +86,34 @@ function AudioShader(num_strings, num_overtones) {
     float num_strings_f = float(NUM_STRINGS);
     float num_overtones_f = float(NUM_OVERTONES);
 
-    
     for (int i = 0; i < NUM_STRINGS; i++) {
         float ii = float(i);
-        float amp = sqrt(2.0 / (ii/2. + 1.0)) / (num_strings_f / 4.0);
-        
-        for(int j = 0; j < NUM_OVERTONES; j++) {
-            float jj = float(j);
-            vec4 vals = texelFetch(u_overtones_texture, ivec2(i * NUM_OVERTONES + j, 0), 0);
-            float oamp = vals.y;
-            float ofreq = vals.x;
-            float start_time = vals.z;
-            float prev_amp = vals.w;
-            float duration = 4.0;
-            float ttime = time - start_time;
-            float block_progress = min(1.0, 2.0 * coord.x / u_resolution.x);
-            float ramped_amp = prev_amp + (oamp - prev_amp) * (block_progress);
-            // float overtone_amp = min(1.0, u_overtones[i * NUM_OVERTONES + j]);
-            float overtone_amp = min(1.0, ramped_amp);
-            if(ttime > 0.0 && ttime < duration) {
-                float damp = (1./((jj/3.)+1.)) * overtone_amp * amp * pow(1.0 - (ttime/duration), 4.0 * (jj+1.0));
 
-                // if(damp > 0.00001) {
-                    // to avoid beat patterns
-                    float phase = 6.28318530718 * ii / num_strings_f;
-                    sum += sine(ofreq, ttime + phase) * damp;
-                // }
+        float amp = sqrt(2.0 / (ii/2. + 1.0)) / max(min(num_strings_f, 30.0), 10.0);
+        
+        if(amp > 0.00001) {
+            for(int j = 0; j < NUM_OVERTONES; j++) {
+                float jj = float(j);
+                vec4 vals = texelFetch(u_overtones_texture, ivec2(i * NUM_OVERTONES + j, 0), 0);
+                float oamp = vals.y;
+                float ofreq = vals.x;
+                float start_time = vals.z;
+                float prev_amp = vals.w;
+                float duration = 4.0;
+                float ttime = time - start_time;
+                float block_progress = min(1.0, 2.0 * coord.x / u_resolution.x);
+                float ramped_amp = prev_amp + (oamp - prev_amp) * (block_progress);
+                // float overtone_amp = min(1.0, u_overtones[i * NUM_OVERTONES + j]);
+                float overtone_amp = min(1.0, ramped_amp);
+                if(ttime > 0.0 && ttime < duration) {
+                    float damp = (1./((jj/3.)+1.)) * overtone_amp * amp * pow(1.0 - (ttime/duration), 4.0 * (jj+1.0));
+
+                    // if(damp > 0.00001) {
+                        // to avoid beat patterns
+                        float phase = 6.28318530718 * ii / num_strings_f;
+                        sum += sine(ofreq, ttime + phase) * damp;
+                    // }
+                }
             }
         }
     }
@@ -196,6 +198,9 @@ function AudioShader(num_strings, num_overtones) {
         this.blockOffset = 0;
         this.strings_updated_this_frame = {}
         node.onaudioprocess = (e) => {
+            if(window.idle) {
+                return
+            }
             const pixels = new Uint8Array(WIDTH * HEIGHT * 4);
             const outputL = e.outputBuffer.getChannelData(0);
             const outputR = e.outputBuffer.getChannelData(1);
