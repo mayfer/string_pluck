@@ -20,7 +20,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
             html, body { margin: 0; padding: 0; background: black; font-family: sans-serif; overflow: hidden; width: 100%; height: 100%; }
-            .info { position: absolute; top: 0; left: 0; width: 100%; text-align: center; color: #888; }
+            .info { position: absolute; top: 10px; left: 10px; right: 10px; text-align: center; color: #888; }
             .container { height: 100%; margin: 0 auto; 
     display: flex;           /* establish flex container */
     flex-direction: column;  /* make main axis vertical */
@@ -29,23 +29,39 @@
 }
             #draw { width: 100%; height: 100%; }
 
-            #controls { position: fixed; bottom: 0; left: 0; right: 0; }
+            #controls { position: fixed; bottom: 0; left: 0; right: 0; pointer-events: none; }
             /* flex row of items with 10px space in between, centered in container */
             #controls .controls-inner { display: flex; flex-direction: row; justify-content: center; align-items: center; padding: 10px; }
-            #controls .controls-inner .item { padding: 10px; background: #fff; color: #000; cursor: pointer; margin: 10px; }
+            #controls .item { padding: 10px; background: #fff; color: #000; cursor: pointer; margin: 10px; pointer-events: all; transition: all 0.2s ease-in-out; }
+            #controls .item:hover { box-shadow: 0 0 2px #fff; }
+            #controls .item:active { background: #000; color: #fff; }
+            #controls .item.inactive { opacity: 0.2; pointer-events: none; }
+            #controls .gap { flex: 1; }
+            #controls .icon { font-size: 12px; display: inline-block; margin-left: 5px; border-radius: 2px; background: #7c7c7c; color: #fff; padding: 2px; box-shadow: 2px 2px 2px #000; }
+            #controls .item.toggle { background: #333; color: #fff; padding: 5px; }
+            #controls .item.toggle .choice {background: none; color: #aaa; display: inline-block; margin: 5px; padding: 5px; transition: all 0.2s ease-in-out; }
+            #controls .item.toggle .choice.selected { background: #fff; color: #000; }
+
+            #presets { position: fixed; top: 20px; left: 20px; right: 20px; bottom: 20px; background: rgba(0,0,0,0.8); color: #fff; padding: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; pointer-events: all; }
+            #presets .preset { width: 300px; padding: 20px; background: #eee; color: #000; cursor: pointer; margin: 10px; pointer-events: all; transition: all 0.2s ease-in-out; }
+            #presets .preset:hover { background: #fff; }
+            #presets .preset-name { font-size: 20px; font-weight: bold; }
+            #presets .preset-description { font-size: 12px; }
+            #presets .preset-button { background: #000; color: #fff; padding: 5px; margin-top: 10px; }
 
         </style>
     </head>
     <body>
         <div class='container'>
-            <div class='info'>The same simulation is used to calculate audio &amp; visuals. Plucking at different parts of the string produces different sounds, just like on a guitar.<br />Click or drag strings to play</div>
+            <div class='info'>pluck</div>
             <div id='draw'></div>
             <div id="controls"></div>
         </div>
         <script type="module">
             import {html, render, Component} from "./preact.htm.module.js"
 
-            const base_freq = 110;
+            const base_freq = Notes.note_to_freq('A2');
+            console.log('base_freq', base_freq);
 
             window.drawing_mode = false;
             let draw_start = null
@@ -82,7 +98,46 @@
                 
                 let initial_strings = JSON.parse(localStorage.getItem('strings')) || [];
 
+                if(!initial_strings.length) {
+                    return get72strings(canvas_jq);
+                }
+
                 return initial_strings;
+            }
+
+            const get72strings = (canvas_jq) => {
+                let num_strings = 72;
+                let initial_strings = [];
+                let width = canvas_jq.width();
+                let height = canvas_jq.height();
+                let width_base_freq = Math.min(width - 100, 1500)
+                for(var i=0; i<num_strings; i++) {
+                    initial_strings.push({
+                        string_center: {x: canvas_jq.width()/2, y: 100 + (i+1) * ((height-200) / num_strings)},
+                        string_width: Notes.relative_note(width_base_freq, -i),
+                        angle: 0, // i * Math.PI / 64
+                    });
+                }
+
+                return initial_strings;
+            }
+
+            const getTwoFullOctaveStrings = (canvas_jq) => {
+                let num_strings = 60;
+                let initial_strings = [];
+                let width = canvas_jq.width();
+                let height = canvas_jq.height();
+                let width_base_freq = Math.min(width - 100, 500)
+                for(var i=0; i<num_strings; i++) {
+                    initial_strings.push({
+                        string_center: {x: canvas_jq.width()/2, y: 100 + (i+1) * ((height-200) / num_strings)},
+                        string_width: Notes.relative_note(width_base_freq*2, -(i)),
+                        angle: 0, // i * Math.PI / 64
+                    });
+                }
+
+                return initial_strings;
+
             }
 
             const getSpiralingStrings = (canvas_jq) => {
@@ -100,10 +155,12 @@
                 //         angle: 0, // i * Math.PI / 64
                 //     });
                 // }
+                let num_strings = 72
+                const initial_strings = [];
 
                 let width = canvas_jq.width();
                 let height = canvas_jq.height();
-                let width_55hz = Math.min(width - 100, 500)
+                let width_base_freq = Math.min(width - 100, 500)
                 const total_angle = Math.PI * 2;
                 for(var i=0; i<num_strings; i++) {
                     initial_strings.push({
@@ -112,8 +169,8 @@
                             y:  (height/3) * Math.cos((total_angle * i / num_strings)) + height/2,
                         },
                         // string_center: {x: width/2, y: 100 + (i+1) * ((height-200) / num_strings)},
-                        //string_width: Notes.relative_note(width_55hz, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
-                        string_width: Notes.relative_note(width_55hz*2, -i),
+                        //string_width: Notes.relative_note(width_base_freq, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
+                        string_width: Notes.relative_note(width_base_freq*2, -i),
                         angle: Math.PI * (3/4) + i * total_angle / num_strings,
                     });
                 }
@@ -124,7 +181,7 @@
                 midi_string_map = {};
                 let width = canvas_jq.width();
                 let height = canvas_jq.height();
-                let width_55hz = Math.min(width - 100, 500)
+                let width_base_freq = Math.min(width - 100, 500)
 
                 let duration = 5000;
 
@@ -148,7 +205,7 @@
                 for(let i=0; i<strings.length; i++) {
                     const string = strings[i];
                     const overtones = [];
-                    let freq = parseInt(base_freq * width_55hz/string.string_width);
+                    let freq = parseInt(base_freq * width_base_freq/string.string_width);
                     for(let j=0; j<num_overtones; j++) {
                         overtones.push({freq: (j+1) * freq, amplitude: 1});
                     }
@@ -174,6 +231,7 @@
                 return { audioShader };
 
             }
+            window.snap_to_note = true;
             $(document).ready(function() {
                 // on blur, go into idle
                 // on focus, resume
@@ -187,7 +245,7 @@
                 let canvas_offset = canvas_jq.offset();
                 let width = canvas_jq.width();
                 let height = canvas_jq.height();
-                let width_55hz = Math.min(width - 100, 500)
+                let width_base_freq = Math.min(width - 100, 500)
 
                 const initial_strings = getInitialStrings(canvas_jq);
 
@@ -218,7 +276,14 @@
                         let offsetEnd = draw_end;
                         let string_center = {x: offsetStart.x + (offsetEnd.x - offsetStart.x)/2, y: offsetStart.y + (offsetEnd.y - offsetStart.y)/2};
 
-                        const string_width = Math.sqrt(Math.pow(offsetEnd.x - offsetStart.x, 2) + Math.pow(offsetEnd.y - offsetStart.y, 2))
+                        let string_width = Math.sqrt(Math.pow(offsetEnd.x - offsetStart.x, 2) + Math.pow(offsetEnd.y - offsetStart.y, 2))
+                        if(window.snap_to_note) {
+                            let freq = string_width_to_freq(string_width, width_base_freq);
+                            let snap_freq = Notes.note_to_freq(Notes.freq_to_note(freq).note);
+                            console.log('note', Notes.freq_to_note(freq).note, 'snap_freq', snap_freq);
+                            string_width = freq_to_string_width(snap_freq, width_base_freq);
+                        }
+
                         let string = {
                             string_center,
                             string_width,
@@ -292,6 +357,19 @@
                     })
                 };
 
+                function string_width_to_freq(string_width, width_base_freq) {
+                    if(string_width == 0) {
+                        return 0;
+                    }
+                    return base_freq * width_base_freq/string_width;
+                }
+                function freq_to_string_width(freq, width_base_freq) {
+                    if(freq == 0) {
+                        return 0;
+                    }
+                    return base_freq * width_base_freq/freq;
+                }
+
                 let last_frame_time;
 
                 let frame = () => {
@@ -357,22 +435,29 @@
                     }
 
                     if(window.drawing_mode && draw_start && draw_end) {
-                        context.strokeStyle = "#ffa";
-                        context.beginPath();
-                        context.moveTo(draw_start.x, draw_start.y);
-                        context.lineTo(draw_end.x, draw_end.y);
-                        context.stroke();
-
-                        // type the note name above draw_end
-                        // let note = Notes.note_from_position(draw_end.x, draw_end.y, width, height);
                         let string_width = Math.sqrt(Math.pow(draw_end.x - draw_start.x, 2) + Math.pow(draw_end.y - draw_start.y, 2))
-                        let freq = parseInt(base_freq * width_55hz/string_width);
-                        let notename = freq.toFixed(2) + 'hz';
-                        context.save();
-                        context.fillStyle = "#fff";
-                        context.font = "20px Arial";
-                        context.fillText(notename, draw_end.x, draw_end.y - 20);
-                        context.restore();
+                        if(string_width > 0) {
+                            context.strokeStyle = "#ffa";
+                            context.beginPath();
+                            context.moveTo(draw_start.x, draw_start.y);
+                            context.lineTo(draw_end.x, draw_end.y);
+                            context.stroke();
+    
+                            let freq = string_width_to_freq(string_width, width_base_freq);
+    
+                            let {note, error} = Notes.freq_to_note(freq);
+                            context.save();
+                            context.fillStyle = "#fff";
+                            context.font = "20px Arial";
+                            context.fillText(note, draw_end.x, draw_end.y - 20);
+    
+                            if(!window.snap_to_note) {
+                                context.font = "10px Arial"
+                                context.fillText((error < 0 ? '-' : error > 0 ? '+' : '')+error.toFixed(2) + 'hz', draw_end.x, draw_end.y - 10);
+                            }
+                            context.restore();
+                        }
+
 
                     }
                 }
@@ -411,18 +496,6 @@
                 });
 
                 let auto_pluck_distance = 5;
-
-                $(document).on('keydown', (e) => {
-                    if(e.shiftKey) {
-                        start_drawing();
-                    }
-                })
-                $(document).on('keyup', (e) => {
-                    if(window.drawing_mode) {
-                        finish_drawing_string();
-                        stop_drawing();
-                    }
-                })
 
                 let rotate_coordinates_for_string = function(string, offsetX, offsetY) {
                     return {
@@ -618,12 +691,28 @@
                         super();
                         this.state = {
                             drawing_mode: window.drawing_mode,
+                            snap_to_note: window.snap_to_note,
                         }
+                    }
+                    componentDidMount() {
+                        window.addEventListener('keydown', (e) => {
+                            if(e.shiftKey) {
+                                start_drawing();
+                                this.setState({drawing_mode: true});
+                            }
+                        })
+                        window.addEventListener('keyup', (e) => {
+                            if(window.drawing_mode) {
+                                finish_drawing_string();
+                                stop_drawing();
+                                this.setState({drawing_mode: false});
+                            }
+                        })
                     }
                     render() {
                         return html`
                             <div class='controls-inner'>
-                                <div class='draw-mode-button item' onClick=${() => {
+                                <div class='draw-mode-button item toggle' onClick=${() => {
                                     const { drawing_mode } = this.state;
                                     if(drawing_mode) {
                                         this.setState({drawing_mode: false});
@@ -632,13 +721,55 @@
                                         this.setState({drawing_mode: true});
                                         start_drawing();
                                     }
-                                }}>${drawing_mode ? 'Stop drawing' : 'Enter draw mode'}</div>
+                                }}>
+                                <span class='choice ${this.state.drawing_mode ? '' : 'selected'}'>Play mode</span>
+                                    <span class='choice ${this.state.drawing_mode ? 'selected' : ''}'>Draw mode <span class='icon'>⇧ shift</span></span>
+                                </div>
+
+                                <div class='item toggle ${this.state.drawing_mode ? '' : 'inactive'}' onClick=${() => {
+                                    this.setState({snap_to_note: !this.state.snap_to_note});
+                                    window.snap_to_note = !this.state.snap_to_note;
+                                }}>
+                                    <span class='choice ${this.state.snap_to_note ? 'selected' : ''}'>Snap to note</span>
+                                    <span class='choice ${this.state.snap_to_note ? '' : 'selected'}'>Free draw</span>
+                                </div>
+                                <div class='gap'></div>
+                                <div class='item' onClick=${() => {
+                                    this.setState({show_presets: !this.state.show_presets});
+                                }}>
+                                    Presets
+                                </div>
                                 <div class='item' onClick=${() => {
                                     resetAndAddStrings(canvas_jq, audioShader, []);
                                 }}>
                                     Clear
                                 </div>
                             </div>
+                            ${this.state.show_presets ? html`
+                                <div id='presets'>
+                                    <div class='preset' onClick=${() => {
+                                        this.setState({show_presets: false});
+                                        resetAndAddStrings(canvas_jq, audioShader, getSpiralingStrings(canvas_jq));
+                                    }}>
+                                        <div class='preset-name'>Spiral</div>
+                                        <div class='preset-description'>A spiral of strings</div>
+                                    </div>
+                                    <div class='preset' onClick=${() => {
+                                        this.setState({show_presets: false});
+                                        resetAndAddStrings(canvas_jq, audioShader, get72strings(canvas_jq));
+                                    }}>
+                                        <div class='preset-name'>72 strings</div>
+                                        <div class='preset-description'>A lot of strings</div>
+                                    </div>
+                                    <div class='preset' onClick=${() => {
+                                        this.setState({show_presets: false});
+                                        resetAndAddStrings(canvas_jq, audioShader, getTwoFullOctaveStrings(canvas_jq));
+                                    }}>
+                                        <div class='preset-name'>2 octaves</div>
+                                        <div class='preset-description'>Two octaves of strings</div>
+                                    </div>
+                                </div>
+                            ` : html``}
                         `
                     }
                 }
