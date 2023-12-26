@@ -196,12 +196,12 @@ Notes = {
 }
 
 
-// console.log(Notes.freq_to_note(Notes.note_to_freq("A4")))
+// // console.log(Notes.freq_to_note(Notes.note_to_freq("A4")))
 
-const A0_halftone = Notes.note_to_halftone("A0")
-for (var i = 0; i < 24; i++) {
-    const note = Notes.halftone_to_note(i + A0_halftone)
-    const halftone = Notes.note_to_halftone(note)
-    const freq = Notes.note_to_freq(note)
-    console.log(note, halftone, freq)
-}
+// const A0_halftone = Notes.note_to_halftone("A0")
+// for (var i = 0; i < 24; i++) {
+//     const note = Notes.halftone_to_note(i + A0_halftone)
+//     const halftone = Notes.note_to_halftone(note)
+//     const freq = Notes.note_to_freq(note)
+//     console.log(note, halftone, freq)
+// }

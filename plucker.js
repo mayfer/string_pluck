@@ -6,7 +6,19 @@ function pluckableString({id, canvas, overtones, wave_height, string_width, stri
     this.id = id;
 
     this.context = canvas.getContext("2d");
-    this.context.lineWidth = 5;
+    this.lineWidth = 3;
+    if(window.innerWidth > 600) {
+        this.lineWidth = 3;
+    }
+    if(window.innerWidth > 1000) {
+        this.lineWidth = 4;
+    }
+    if(window.innerWidth > 1400) {
+        this.lineWidth = 5;
+    }
+    this.context.lineWidth = this.lineWidth;
+
+    // console.log("line", this.context.lineWidth, "width", window.innerWidth);
     this.wave_height = wave_height;
     this.wave_halfheight = this.wave_height / 2;
     this.center = this.wave_halfheight;
@@ -71,6 +83,7 @@ function pluckableString({id, canvas, overtones, wave_height, string_width, stri
     this.draw_still = function() {
         let context = this.context;
         context.strokeStyle = "rgba(255, 255, 255, 0.1)"
+        context.lineWidth = this.lineWidth;
         context.save();
         context.translate(this.string_center.x, this.string_center.y);
         context.rotate(this.angle);
@@ -92,6 +105,7 @@ function pluckableString({id, canvas, overtones, wave_height, string_width, stri
             return;
         }
         let context = this.context;
+        this.context.lineWidth = this.lineWidth;
         context.save();
         let brightness = 0.1 + Math.pow((this.duration - this.time_diff)/this.duration, 4);
         let pluckness = Math.pow((this.duration - this.time_diff)/this.duration, 15) / 3;

@@ -92,7 +92,7 @@ function AudioShader(num_strings, num_overtones) {
     for (int i = 0; i < NUM_STRINGS; i++) {
         float ii = float(i);
 
-        float amp = sqrt(2.0 / (ii/2. + 1.0)) / max(min(num_strings_f, 30.0), 10.0);
+        float amp = sqrt(2.0 / (ii/2. + 1.0)) / (4.0);
         
         if(amp > 0.00001) {
             for(int j = 0; j < NUM_OVERTONES; j++) {
@@ -106,7 +106,6 @@ function AudioShader(num_strings, num_overtones) {
                 float ttime = time - start_time;
                 float block_progress = min(1.0, 2.0 * coord.x / u_resolution.x);
                 float ramped_amp = prev_amp + (oamp - prev_amp) * (block_progress);
-                // float overtone_amp = min(1.0, u_overtones[i * NUM_OVERTONES + j]);
                 float overtone_amp = min(1.0, ramped_amp);
                 if(ttime > 0.0 && ttime < duration) {
                     float damp = (1./((jj/3.)+1.)) * overtone_amp * amp * pow(1.0 - (ttime/duration), 4.0 * (jj+1.0));
@@ -114,6 +113,7 @@ function AudioShader(num_strings, num_overtones) {
                     // if(damp > 0.00001) {
                         // to avoid beat patterns
                         float phase = 6.28318530718 * ii / num_strings_f;
+                        // float phase = 0.0;
                         sum += sine(ofreq, ttime + phase) * damp;
                     // }
                 }
@@ -238,7 +238,13 @@ function AudioShader(num_strings, num_overtones) {
             this.strings_updated_this_frame = {}
 
         };
-        node.connect(this.audioCtx.destination);
+
+        // node.connect(this.audioCtx.destination);
+
+        const gainNode = this.audioCtx.createGain();
+        gainNode.gain.value = 1;
+        node.connect(gainNode);
+        gainNode.connect(this.audioCtx.destination);
 
         return node;
     }

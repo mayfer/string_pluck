@@ -26,21 +26,28 @@
     flex-direction: column;  /* make main axis vertical */
     justify-content: center; /* center items vertically, in this case */
     align-items: center;     /* center items horizontally, in this case */
+    
+    /* prevent selection of text */
+    user-select: none;
+    
 }
             #draw { width: 100%; height: 100%; }
 
-            #controls { position: fixed; bottom: 0; left: 0; right: 0; pointer-events: none; }
-            /* flex row of items with 10px space in between, centered in container */
-            #controls .controls-inner { display: flex; flex-direction: row; justify-content: center; align-items: center; padding: 10px; }
-            #controls .item { padding: 10px; background: #fff; color: #000; cursor: pointer; margin: 10px; pointer-events: all; transition: all 0.2s ease-in-out; }
+            #controls { position: fixed; bottom: 0; left: 0; right: 0; pointer-events: none; zoom: 0.8; }
+
+            #controls .controls-inner { display: flex; flex-direction: row; justify-content: center; align-items: center; padding: 5px; }
+            #controls .item { padding: 10px; background: #fff; color: #000; cursor: pointer; margin: 5px 10px; pointer-events: all; transition: all 0.2s ease-in-out; }
             #controls .item:hover { box-shadow: 0 0 2px #fff; }
             #controls .item:active { background: #000; color: #fff; }
             #controls .item.inactive { opacity: 0.2; pointer-events: none; }
             #controls .gap { flex: 1; }
             #controls .icon { font-size: 12px; display: inline-block; margin-left: 5px; border-radius: 2px; background: #7c7c7c; color: #fff; padding: 2px; box-shadow: 2px 2px 2px #000; }
             #controls .item.toggle { background: #333; color: #fff; padding: 5px; }
-            #controls .item.toggle .choice {background: none; color: #aaa; display: inline-block; margin: 5px; padding: 5px; transition: all 0.2s ease-in-out; }
-            #controls .item.toggle .choice.selected { background: #fff; color: #000; }
+            #controls .item.toggle .choice {background: none; color: #aaa; display: inline-block; margin: 5px; padding: 5px; }
+            #controls .item.toggle .choice:hover { color: #fff; }
+            #controls .item.toggle .choice.selected { background: #fff; color: #000; transition: all 0.2s ease-in-out; }
+            #controls .item.toggle .choice.draw-mode { background: #afa; }
+            #controls .item.toggle .choice:active { background: #000; color: #fff; }
 
             #presets { position: fixed; top: 20px; left: 20px; right: 20px; bottom: 20px; background: rgba(0,0,0,0.8); color: #fff; padding: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; pointer-events: all; }
             #presets .preset { width: 300px; padding: 20px; background: #eee; color: #000; cursor: pointer; margin: 10px; pointer-events: all; transition: all 0.2s ease-in-out; }
@@ -49,6 +56,14 @@
             #presets .preset-description { font-size: 12px; }
             #presets .preset-button { background: #000; color: #fff; padding: 5px; margin-top: 10px; }
 
+            #presets .close { cursor: pointer; font-size: 20px; text-align: right; width: 340px; padding: 20px; margin: 0;}
+
+            @media only screen and (max-width: 800px) {
+                #controls { zoom: 0.6; }
+                #controls .controls-inner { padding: 5px; }
+                #controls .item.toggle { padding: 2px; }
+                #controls .icon { display: none; }
+            }
         </style>
     </head>
     <body>
@@ -61,7 +76,6 @@
             import {html, render, Component} from "./preact.htm.module.js"
 
             const base_freq = Notes.note_to_freq('A2');
-            console.log('base_freq', base_freq);
 
             window.drawing_mode = false;
             let draw_start = null
@@ -93,6 +107,9 @@
                 
             let pluckableStrings = [];
 
+            let width_base_freq;
+
+
             const getInitialStrings = (canvas_jq) => {
                 let num_strings = 56
                 
@@ -110,7 +127,6 @@
                 let initial_strings = [];
                 let width = canvas_jq.width();
                 let height = canvas_jq.height();
-                let width_base_freq = Math.min(width - 100, 1500)
                 for(var i=0; i<num_strings; i++) {
                     initial_strings.push({
                         string_center: {x: canvas_jq.width()/2, y: 100 + (i+1) * ((height-200) / num_strings)},
@@ -127,7 +143,6 @@
                 let initial_strings = [];
                 let width = canvas_jq.width();
                 let height = canvas_jq.height();
-                let width_base_freq = Math.min(width - 100, 500)
                 for(var i=0; i<num_strings; i++) {
                     initial_strings.push({
                         string_center: {x: canvas_jq.width()/2, y: 100 + (i+1) * ((height-200) / num_strings)},
@@ -160,7 +175,6 @@
 
                 let width = canvas_jq.width();
                 let height = canvas_jq.height();
-                let width_base_freq = Math.min(width - 100, 500)
                 const total_angle = Math.PI * 2;
                 for(var i=0; i<num_strings; i++) {
                     initial_strings.push({
@@ -177,11 +191,90 @@
 
                 return initial_strings;
             }
+
+            const getChordStrings = (canvas_jq) => {
+
+                let width = canvas_jq.width();
+                let height = canvas_jq.height();
+                // C, G, Am, F chords
+                const midi_notes = [
+                    // C major
+                    48,
+                    52,
+                    55,
+                    60,
+                    64,
+
+                    0,
+                    // G major
+                    55,
+                    59,
+                    62,
+                    67,
+                    71,
+                    0,
+                    // A minor
+                    57,
+                    60,
+                    64,
+                    69,
+                    72,
+
+                    0,
+                    // F major
+                    53,
+                    57,
+                    60,
+                    65,
+                    69,
+
+
+                ]
+                const initial_strings = [];
+
+                const num_chords = midi_notes.filter(n => n == 0).length+1;
+                const chunksize = 6;
+                const max_vertical = (height-200)/50;
+                const columns = 2
+                const rows = 2
+                const chord_areas = [];
+                let note_i = 0;
+                for(var i=0; i<columns; i++) {
+                    for(var j=0; j<rows; j++) {
+                        const x = 100 + i * (width-200) / columns;
+                        const y = 100 + j * (height-200) / rows;
+                        const w = (width-200) / columns;
+                        const h = (height-200) / rows;
+                        chord_areas.push({x, y, w, h});
+                        console.log(x, y, w, h);
+
+                        for(var k=0; k<chunksize; k++) {
+                            const midi_number = midi_notes[note_i];
+                            note_i++;
+                            if(midi_number == 0) continue;
+
+                            const center = (width/columns/4) * (i/columns) + x + w/2;
+                            const top = (height/rows/4) * (j/rows) + y + h/2 + (k - chunksize/2) * h/chunksize;
+
+                            const note_offset = midi_number - midi_number_a1;
+                            initial_strings.push({
+                                string_center: {x: center, y: top},
+                                //string_width: Notes.relative_note(width_base_freq, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
+                                string_width: Notes.relative_note(width_base_freq*2, -note_offset),
+                                angle: 0, // i * Math.PI / 64
+                                midi_number,
+                            });
+                        }
+                    }
+                }
+                return initial_strings;
+            }
+
+
             const resetAndAddStrings = function(canvas_jq, audioShader, strings, options={skip_audio: false}) {
                 midi_string_map = {};
                 let width = canvas_jq.width();
                 let height = canvas_jq.height();
-                let width_base_freq = Math.min(width - 100, 500)
 
                 let duration = 5000;
 
@@ -220,7 +313,7 @@
                         angle: string.angle,
                         duration,
                         audio: audioShader,
-                        string_slack: Math.max(5, Math.min(40, string.string_width/5)),
+                        string_slack: Math.max(5, Math.min(20, string.string_width/5)),
                     })
                     pluckableStrings.push(drawWave);
                     midi_string_map[string.midi_number] = drawWave;
@@ -232,7 +325,7 @@
 
             }
             window.snap_to_note = true;
-            $(document).ready(function() {
+            $(document).one('click', () => {
                 // on blur, go into idle
                 // on focus, resume
                 window.idle = false;
@@ -240,12 +333,18 @@
                     window.idle = false;
                 });
                 // create a drawing area inside an element
-                var canvas_jq = new Canvas($('#draw'));
+
+                var canvas_jq = new Canvas($('#draw').empty());
+
+                $(window).resize(function() {
+                    setCanvasSize(canvas_jq, window.innerWidth, window.innerHeight);
+                });
 
                 let canvas_offset = canvas_jq.offset();
                 let width = canvas_jq.width();
                 let height = canvas_jq.height();
-                let width_base_freq = Math.min(width - 100, 500)
+
+                width_base_freq = Math.min(width - 100, 700)
 
                 const initial_strings = getInitialStrings(canvas_jq);
 
@@ -685,6 +784,15 @@
                     canvas.addEventListener(eventName, handleClickOrTouchEvents, { passive: false });
                 });
 
+                const pick_svg = html`<svg style="width: 20px;height: 15px;" xmlns="http://www.w3.org/2000/svg" version="1.0" viewBox="0 0 1079.000000 1280.000000" preserveAspectRatio="xMidYMid meet">
+<metadata>
+Created by potrace 1.15, written by Peter Selinger 2001-2017
+</metadata>
+<g transform="translate(0.000000,1280.000000) scale(0.100000,-0.100000)" fill="#000000" stroke="none">
+<path d="M4830 12794 c-935 -43 -1710 -175 -2430 -414 -733 -243 -1301 -570 -1720 -990 -400 -400 -620 -857 -671 -1390 -15 -160 1 -536 32 -775 80 -608 384 -1553 856 -2660 909 -2132 2275 -4560 3245 -5774 436 -544 765 -812 970 -788 401 48 1423 1247 2635 3092 1645 2505 2917 5066 2998 6035 3 41 14 131 23 200 26 191 23 516 -7 683 -66 378 -206 687 -459 1017 -87 113 -350 374 -487 484 -137 109 -410 292 -575 384 -863 481 -1994 781 -3310 877 -200 15 -923 27 -1100 19z"/>
+</g>
+</svg>`
+
 
                 class Controls extends Component {
                     constructor() {
@@ -709,7 +817,10 @@
                             }
                         })
                     }
+
+                    
                     render() {
+                        const touch_device = 'ontouchstart' in document.documentElement;
                         return html`
                             <div class='controls-inner'>
                                 <div class='draw-mode-button item toggle' onClick=${() => {
@@ -722,8 +833,8 @@
                                         start_drawing();
                                     }
                                 }}>
-                                <span class='choice ${this.state.drawing_mode ? '' : 'selected'}'>Play mode</span>
-                                    <span class='choice ${this.state.drawing_mode ? 'selected' : ''}'>Draw mode <span class='icon'>⇧ shift</span></span>
+                                <span class='choice ${this.state.drawing_mode ? '' : 'selected'}'>${pick_svg} Pluck</span>
+                                    <span class='choice ${this.state.drawing_mode ? 'selected' : ''}'>✏️ Draw ${!touch_device ? html`<span class='icon'>⇧ shift</span>` : ``}</span>
                                 </div>
 
                                 <div class='item toggle ${this.state.drawing_mode ? '' : 'inactive'}' onClick=${() => {
@@ -731,7 +842,7 @@
                                     window.snap_to_note = !this.state.snap_to_note;
                                 }}>
                                     <span class='choice ${this.state.snap_to_note ? 'selected' : ''}'>Snap to note</span>
-                                    <span class='choice ${this.state.snap_to_note ? '' : 'selected'}'>Free draw</span>
+                                    <span class='choice ${this.state.snap_to_note ? '' : 'selected'}'>Precise</span>
                                 </div>
                                 <div class='gap'></div>
                                 <div class='item' onClick=${() => {
@@ -747,6 +858,9 @@
                             </div>
                             ${this.state.show_presets ? html`
                                 <div id='presets'>
+                                    <div class='close' onClick=${() => {
+                                        this.setState({show_presets: false});
+                                    }}>X</div>
                                     <div class='preset' onClick=${() => {
                                         this.setState({show_presets: false});
                                         resetAndAddStrings(canvas_jq, audioShader, getSpiralingStrings(canvas_jq));
@@ -767,6 +881,13 @@
                                     }}>
                                         <div class='preset-name'>2 octaves</div>
                                         <div class='preset-description'>Two octaves of strings</div>
+                                    </div>
+                                    <div class='preset' onClick=${() => {
+                                        this.setState({show_presets: false});
+                                        resetAndAddStrings(canvas_jq, audioShader, getChordStrings(canvas_jq));
+                                    }}>
+                                        <div class='preset-name'>Chords</div>
+                                        <div class='preset-description'>C, G, Am, F chords</div>
                                     </div>
                                 </div>
                             ` : html``}
