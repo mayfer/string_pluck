@@ -134,9 +134,7 @@ function AudioShader(num_strings, num_overtones) {
   }
   `;
 
-    let buffer_size = 2048;
-    
-    this.vales_updated = false;
+    let buffer_size = 1024;
     
     let createAudio = () => {
         this.overtones_texture = new Float32Array(num_strings * num_overtones * 4);
