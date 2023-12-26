@@ -325,7 +325,7 @@
 
             }
             window.snap_to_note = true;
-            $(document).one('click', () => {
+            $(document).ready(function() {
                 // on blur, go into idle
                 // on focus, resume
                 window.idle = false;
