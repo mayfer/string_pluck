@@ -5,13 +5,14 @@ class BufferQueueProcessor extends AudioWorkletProcessor {
         this.currentBuffer = null;
         this.currentPosition = 0;
         this.port.onmessage = event => {
-            if (event.data.audioBuffer) {
-                this.bufferQueue.push(event.data.audioBuffer);
+            if (event.data.buffer) {
+                // Convert the ArrayBuffer to Float32Array and enqueue
+                this.bufferQueue.push(new Float32Array(event.data.buffer));
             }
         };
     }
 
-    process(inputs, outputs, parameters) {
+    process(inputs, outputs) {
         const output = outputs[0];
         if (!this.currentBuffer && this.bufferQueue.length > 0) {
             this.currentBuffer = this.bufferQueue.shift();
@@ -19,7 +20,6 @@ class BufferQueueProcessor extends AudioWorkletProcessor {
         }
 
         if (this.currentBuffer) {
-            // console.log("buffer queue processor: " + this.currentBuffer.length);
             for (let channel = 0; channel < output.length; ++channel) {
                 const outputChannel = output[channel];
                 for (let i = 0; i < outputChannel.length; ++i) {

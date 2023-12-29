@@ -134,7 +134,7 @@ function AudioShader(num_strings, num_overtones) {
   }
   `;
 
-    let buffer_size = 1024;
+    let buffer_size = 512;
     
     let createAudio = async () => {
         this.overtones_texture = new Float32Array(num_strings * num_overtones * 4);
@@ -145,18 +145,36 @@ function AudioShader(num_strings, num_overtones) {
         const HEIGHT = 1;
 
         const audioWorklet = audioCtx.audioWorklet;
-        console.log("audioWorklet", audioWorklet);
         audioCtx.audioWorklet.addModule('./audio_worklet.js').then(() => {
 
             const bufferPlayerNode = new AudioWorkletNode(audioCtx, 'buffer-queue-processor');
-            console.log("bufferPlayerNode", bufferPlayerNode);
             bufferPlayerNode.connect(audioCtx.destination);
             
             const calculate_and_send_to_worklet = () => {
-                const audioBuffer = process_audio();
-                bufferPlayerNode.port.postMessage({ audioBuffer: audioBuffer });
+                if(audioCtx.state === 'suspended') {
+                    // console.log("audio context suspended");
+                    return false
+                }
+                const audioBuffer = process_audio()
+                if(audioBuffer) {
+                    buffer = audioBuffer.buffer
+                    bufferPlayerNode.port.postMessage({ buffer }, [buffer]);
+                }
+                return true
             }
-            setInterval(() => calculate_and_send_to_worklet(), 1000 * buffer_size / audioCtx.sampleRate);
+
+            let started = false;
+
+            setInterval(() => {
+                if(audioCtx.state == 'running') {
+                    if(!started) {
+                        calculate_and_send_to_worklet();
+                        started = true;
+                    }
+                    calculate_and_send_to_worklet();
+                }
+                // calculate_and_send_to_worklet()
+            }, 1000 * buffer_size / audioCtx.sampleRate);
         });
 
         //const audioBuffer = this.audioCtx.createBuffer(2, 1024, this.audioCtx.sampleRate);
