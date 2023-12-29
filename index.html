@@ -679,6 +679,7 @@
                     let coordinates;
 
                     if((event.type === 'touchstart' || event.type === 'mousedown') && audioShader.audioCtx.state === 'suspended') {
+                        // console.log('resuming audio');
                         audioShader.resume();
                     }
 

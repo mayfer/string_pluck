@@ -92,7 +92,7 @@ function AudioShader(num_strings, num_overtones) {
     for (int i = 0; i < NUM_STRINGS; i++) {
         float ii = float(i);
 
-        float amp = sqrt(2.0 / (ii/2. + 1.0)) / (4.0);
+        float amp = sqrt(2.0 / (ii/2. + 1.0)) / (8.0);
         
         if(amp > 0.00001) {
             for(int j = 0; j < NUM_OVERTONES; j++) {
@@ -136,15 +136,31 @@ function AudioShader(num_strings, num_overtones) {
 
     let buffer_size = 1024;
     
-    let createAudio = () => {
+    let createAudio = async () => {
         this.overtones_texture = new Float32Array(num_strings * num_overtones * 4);
-        this.audioCtx = new AudioContext({sampleRate: 44100});
+        const audioCtx = new AudioContext({sampleRate: 44100});
+        this.audioCtx = audioCtx;
         const DURATION = 3; // seconds
         const WIDTH = buffer_size;
         const HEIGHT = 1;
 
+        const audioWorklet = audioCtx.audioWorklet;
+        console.log("audioWorklet", audioWorklet);
+        audioCtx.audioWorklet.addModule('./audio_worklet.js').then(() => {
+
+            const bufferPlayerNode = new AudioWorkletNode(audioCtx, 'buffer-queue-processor');
+            console.log("bufferPlayerNode", bufferPlayerNode);
+            bufferPlayerNode.connect(audioCtx.destination);
+            
+            const calculate_and_send_to_worklet = () => {
+                const audioBuffer = process_audio();
+                bufferPlayerNode.port.postMessage({ audioBuffer: audioBuffer });
+            }
+            setInterval(() => calculate_and_send_to_worklet(), 1000 * buffer_size / audioCtx.sampleRate);
+        });
+
         //const audioBuffer = this.audioCtx.createBuffer(2, 1024, this.audioCtx.sampleRate);
-        const node = this.audioCtx.createScriptProcessor(WIDTH * HEIGHT, 1, 2);
+        // const node = this.audioCtx.createScriptProcessor(WIDTH * HEIGHT, 1, 2);
 
         const canvas = document.createElement('canvas');
         canvas.width = WIDTH;
@@ -197,13 +213,13 @@ function AudioShader(num_strings, num_overtones) {
         
         this.blockOffset = 0;
         this.strings_updated_this_frame = {}
-        node.onaudioprocess = (e) => {
+        
+        const process_audio = () => {
             if(window.idle) {
                 return
             }
             const pixels = new Uint8Array(WIDTH * HEIGHT * 4);
-            const outputL = e.outputBuffer.getChannelData(0);
-            const outputR = e.outputBuffer.getChannelData(1);
+            const output = new Float32Array(samples);
             
             
             gl.uniform1f(this.uniforms['u_blockOffset'], this.blockOffset * samples / this.audioCtx.sampleRate);
@@ -211,8 +227,8 @@ function AudioShader(num_strings, num_overtones) {
             gl.readPixels(0, 0, WIDTH, HEIGHT, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
 
             for (let j = 0; j < samples; j++) {
-                outputL[j] = (pixels[j * 4 + 0] + 256 * pixels[j * 4 + 1]) / 65535 * 2 - 1;
-                outputR[j] = (pixels[j * 4 + 2] + 256 * pixels[j * 4 + 3]) / 65535 * 2 - 1;
+                output[j] = (pixels[j * 4 + 0] + 256 * pixels[j * 4 + 1]) / 65535 * 2 - 1;
+                // outputR[j] = (pixels[j * 4 + 2] + 256 * pixels[j * 4 + 3]) / 65535 * 2 - 1;
             }
 
             this.blockOffset += 1;
@@ -235,16 +251,9 @@ function AudioShader(num_strings, num_overtones) {
             }
             this.strings_updated_this_frame = {}
 
+            return output;
         };
 
-        // node.connect(this.audioCtx.destination);
-
-        const gainNode = this.audioCtx.createGain();
-        gainNode.gain.value = 1;
-        node.connect(gainNode);
-        gainNode.connect(this.audioCtx.destination);
-
-        return node;
     }
 
     this.wrap_blockOffset = function () {
@@ -265,9 +274,7 @@ function AudioShader(num_strings, num_overtones) {
 
 
     this.setup_audio = function () {
-        const node = createAudio();
-        this.node = node;
-        return node;
+        createAudio();
     }
 
     this.updateString = function (message) {
@@ -316,7 +323,7 @@ function AudioShader(num_strings, num_overtones) {
 
     this.destroy = async function () {
         gl.deleteProgram(this.program);
-        this.node.disconnect();
+        // this.node.disconnect();
         this.audioCtx.close();
         // destroy shaders
     }
