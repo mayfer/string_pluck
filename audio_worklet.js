@@ -6,35 +6,23 @@ class BufferQueueProcessor extends AudioWorkletProcessor {
         this.currentPosition = 0;
         this.port.onmessage = event => {
             if (event.data.buffer) {
-                // Convert the ArrayBuffer to Float32Array and enqueue
-                this.bufferQueue.push(new Float32Array(event.data.buffer));
             }
         };
+        this.time = 0;
     }
 
     process(inputs, outputs) {
         const output = outputs[0];
-        if (!this.currentBuffer && this.bufferQueue.length > 0) {
-            this.currentBuffer = this.bufferQueue.shift();
-            this.currentPosition = 0;
-        }
 
-        if (this.currentBuffer) {
+        const channel_length = output[0].length;
+        for (let i = 0; i < channel_length; ++i) {
+            this.time += 1;
             for (let channel = 0; channel < output.length; ++channel) {
                 const outputChannel = output[channel];
-                for (let i = 0; i < outputChannel.length; ++i) {
-                    if (this.currentPosition < this.currentBuffer.length) {
-                        outputChannel[i] = this.currentBuffer[this.currentPosition++];
-                    } else {
-                        outputChannel[i] = 0; // Fill with silence if buffer is empty
-                    }
-                }
-            }
-
-            if (this.currentPosition >= this.currentBuffer.length) {
-                this.currentBuffer = null;
+                outputChannel[i] =( Math.sin(this.time / 30) + Math.sin(this.time / 60) ) / 2;
             }
         }
+
         return true;
     }
 }

@@ -152,16 +152,7 @@ function AudioShader(num_strings, num_overtones) {
             bufferPlayerNode.connect(audioCtx.destination);
             
             const calculate_and_send_to_worklet = () => {
-                if(audioCtx.state === 'suspended') {
-                    // console.log("audio context suspended");
-                    return false
-                }
-                const audioBuffer = process_audio()
-                if(audioBuffer) {
-                    buffer = audioBuffer.buffer
-                    bufferPlayerNode.port.postMessage({ buffer }, [buffer]);
-                }
-                return true
+                // bufferPlayerNode.port.postMessage({ buffer }, [buffer]);
             }
 
             let started = false;
@@ -178,100 +169,9 @@ function AudioShader(num_strings, num_overtones) {
             }, 1000 * buffer_size / audioCtx.sampleRate);
         });
 
-        //const audioBuffer = this.audioCtx.createBuffer(2, 1024, this.audioCtx.sampleRate);
-        // const node = this.audioCtx.createScriptProcessor(WIDTH * HEIGHT, 1, 2);
-
-        const canvas = document.createElement('canvas');
-        canvas.width = WIDTH;
-        canvas.height = HEIGHT;
-        gl = canvas.getContext('webgl2');
-        const ext = gl.getExtension('EXT_color_buffer_float');
-        // console.log("Extension", ext);
-
-        const program = createProgramFromSource(gl, VERTEX_SHADER, FRAGMENT_SHADER);
-        this.program = program;
-        const samples = WIDTH * HEIGHT;
-
-        this.uniforms = getUniformLocations(gl, program, ['u_sampleRate', 'u_blockOffset', 'u_resolution', 'u_overtones']);
-
-        gl.useProgram(program);
-        gl.uniform1f(this.uniforms['u_sampleRate'], this.audioCtx.sampleRate);
-        gl.uniform2f(this.uniforms['u_resolution'], WIDTH, HEIGHT);
-
-        const overtone_amplitudes = new Float32Array(num_strings * num_overtones);
-        gl.uniform1f(this.uniforms['u_num_strings'], num_strings);
-        gl.uniform1f(this.uniforms['u_num_overtones'], num_overtones);
-        
-        let base_freq = 55;
-        for (let i = 0; i < num_strings; i++) {
-            let s_freq = Math.exp(Math.log(base_freq) + 0.05776226504666212 * i);
-            for (let j = 0; j < num_overtones; j += 1) {
-                overtone_amplitudes[i * num_overtones + j] = 1 / (j + 1);
-                
-                let amp = 0;
-                let start_at = i;
-                let o_freq = s_freq * (j + 1);
-                let prev_amp = 0;
-                this.overtones_texture[(i * num_overtones + j) * 4] = o_freq;
-                this.overtones_texture[(i * num_overtones + j) * 4 + 1] = amp;
-                this.overtones_texture[(i * num_overtones + j) * 4 + 2] = start_at;
-                this.overtones_texture[(i * num_overtones + j) * 4 + 3] = prev_amp;
-            }
-            
-        }
-        gl.uniform1fv(this.uniforms['u_overtones'], overtone_amplitudes);
-        
-        var texture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, overtone_amplitudes.length, 1, 0, gl.RGBA, gl.FLOAT, this.overtones_texture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.uniform1f(this.uniforms['u_overtones_texture'], this.overtones_texture);
-        
-        // console.log("Max fragment uniform vectors", gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS));
         
         this.blockOffset = 0;
         this.strings_updated_this_frame = {}
-        
-        const process_audio = () => {
-            if(window.idle) {
-                return
-            }
-            const pixels = new Uint8Array(WIDTH * HEIGHT * 4);
-            const output = new Float32Array(samples);
-            
-            
-            gl.uniform1f(this.uniforms['u_blockOffset'], this.blockOffset * samples / this.audioCtx.sampleRate);
-            gl.drawArrays(gl.TRIANGLES, 0, 6);
-            gl.readPixels(0, 0, WIDTH, HEIGHT, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-
-            for (let j = 0; j < samples; j++) {
-                output[j] = (pixels[j * 4 + 0] + 256 * pixels[j * 4 + 1]) / 65535 * 2 - 1;
-                // outputR[j] = (pixels[j * 4 + 2] + 256 * pixels[j * 4 + 3]) / 65535 * 2 - 1;
-            }
-
-            this.blockOffset += 1;
-            this.wrap_blockOffset();
-
-            gl.uniform1f(this.uniforms['u_overtones_texture'], this.overtones_texture);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, num_strings * num_overtones, 1, 0, gl.RGBA, gl.FLOAT, this.overtones_texture);
-            this.update_queued = false;
-
-            for (let i = 0; i < num_strings; i++) {
-                for (let j = 0; j < num_overtones; j += 1) {
-
-                    let prev_amp = this.overtones_texture[(i * num_overtones + j) * 4 + 3];
-                    let curr_amp = this.overtones_texture[(i * num_overtones + j) * 4 + 1];
-                    // if(prev_amp != curr_amp) {
-                    // console.log("prev amp", prev_amp, "curr amp", curr_amp);
-                    this.overtones_texture[(i * num_overtones + j) * 4 + 3] = curr_amp;
-                    this.update_queued = true;
-                }
-            }
-            this.strings_updated_this_frame = {}
-
-            return output;
-        };
 
     }
 
@@ -313,9 +213,6 @@ function AudioShader(num_strings, num_overtones) {
             //let amp = stopped ? 0 : 1 / (j+1);2
 
             for (let j = 0; j < num_overtones; j += 1) {
-                let prev_amp = this.overtones_texture[(i * num_overtones + j) * 4 + 1];
-                this.overtones_texture[(i * num_overtones + j) * 4 + 3] = prev_amp;
-                this.overtones_texture[(i * num_overtones + j) * 4 + 1] = 0;
             }
         } else {
             for (let j = 0; j < num_overtones; j += 1) {
@@ -323,12 +220,7 @@ function AudioShader(num_strings, num_overtones) {
                 //let o_freq = s_freq * (j+1);
                 let ofreq = overtones[j].freq;
                 let oamp = overtones[j].amplitude;
-                let prev_amp = this.overtones_texture[(i * num_overtones + j) * 4 + 1];
-
-                this.overtones_texture[(i * num_overtones + j) * 4 + 3] = prev_amp;
-                this.overtones_texture[(i * num_overtones + j) * 4] = ofreq;
-                this.overtones_texture[(i * num_overtones + j) * 4 + 1] = oamp;
-                this.overtones_texture[(i * num_overtones + j) * 4 + 2] = start_at;
+                let prev_amp = oamp;
             }
         }
         this.update_queued = true;
