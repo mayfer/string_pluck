@@ -143,6 +143,7 @@ function AudioShader(num_strings, num_overtones) {
         const DURATION = 3; // seconds
         const WIDTH = buffer_size;
         const HEIGHT = 1;
+        this.strings_updated_this_frame = {}
 
         const audioWorklet = audioCtx.audioWorklet;
         audioCtx.audioWorklet.addModule('./audio_worklet.js').then(() => {
