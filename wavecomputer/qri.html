@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>string theory, the guitar kind</title>
+        <meta charset='utf-8' />
+        <link rel="shortcut icon" href="#">
+        <!-- libs -->
+        <script type='text/javascript' src='jquery.min.js?1'></script>
+        <script type='text/javascript' src='draw.js?1'></script>
+        <script type='text/javascript' src='drawwave_qri.js?1'></script>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            html, body { margin: 0; padding: 0; background: #fff; height:  100%; }
+            .container { height: 100%; margin: 0 auto; 
+    display: flex;           /* establish flex container */
+    flex-direction: column;  /* make main axis vertical */
+    justify-content: center; /* center items vertically, in this case */
+    align-items: center;     /* center items horizontally, in this case */}
+            #draw { width: 100%; height: 100%; outline: 1px solid black; }
+        </style>
+        <script type='text/javascript'>
+            $(document).ready(function() {
+
+                // create a drawing area inside an element
+                var canvas_jq = new Canvas($('#draw'));
+
+                const freqs1 = [];
+                for (let i = 0; i < 5; i++) {
+                    freqs1.push(i * 110 );
+                }
+
+                const freqs2 = [];
+                for (let i = 0; i < 12; i++) {
+                    if(i !== 3) freqs2.push({
+                        freq: i * 220,
+                        amp: Math.random()
+                    });
+                }
+
+                const freqs3 = [];
+                for (let i = 0; i < 12; i++) {
+                    if(i % 2 == 0) {
+                        freqs3.push(i * 220);
+                    } else {
+                        freqs3.push(i * 330);
+                    }
+                }
+
+                const freqs4 = [];
+                for (let i = 0; i < 60; i++) {
+                    freqs4.push(i * 110);
+                }
+
+                const freqs5 = [];
+                for (let i = 0; i < 10; i++) {
+                    freqs5.push(i * 110 + 40 + i * 110 * Math.random());
+                }
+                const freqs6 = [];
+                for (let i = 0; i < 20; i++) {
+                    freqs6.push(i  * 110);
+                }
+
+
+                const freqs = freqs2
+
+                const waves = freqs.map(({freq, amplitude}) => new standingWave({freq: freq, gain: amplitude}));
+                let waveheight = 600;
+                
+                const strings = waves.map(wave => new stringSubCanvas(canvas_jq, wave, 110, waveheight/2, 0));
+
+                let superposed = new superposedStringCanvas(canvas_jq, strings, waveheight);
+
+                const start_time = Date.now();
+                let paused = false;
+                const render = () => {
+                    // canvas_jq.clear();
+                    if(!paused) {
+                        const time = Date.now();
+                        superposed.draw((time - start_time) / 15);
+                    }
+                    requestAnimationFrame(render);
+                }
+                window.addEventListener('keydown', (e) => {
+                    if(e.keyCode == 32) {
+                        paused = !paused;
+                    }
+                });
+                render();
+            });
+        </script>
+    </head>
+    <body>
+        <div class='container'>
+            <div id='draw'> </div>
+        </div>
+    </body>
+</html>
+

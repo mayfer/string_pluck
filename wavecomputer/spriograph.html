@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>string theory, the guitar kind</title>
+        <meta charset='utf-8' />
+        <!-- libs -->
+        <script type='text/javascript' src='jquery.min.js?1'></script>
+        <script type='text/javascript' src='draw.js?1'></script>
+        <script type='text/javascript' src='drawwave_qri.js?1'></script>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            html, body { margin: 0; padding: 0; background: #fff; height:  100%; }
+            .container { height: 100%; margin: 0 auto; 
+    display: flex;           /* establish flex container */
+    flex-direction: column;  /* make main axis vertical */
+    justify-content: center; /* center items vertically, in this case */
+    align-items: center;     /* center items horizontally, in this case */}
+            #draw { width: 100%; height: 100%; outline: 1px solid black; }
+        </style>
+        <script type='text/javascript'>
+            $(document).ready(function() {
+
+                // create a drawing area inside an element
+                var canvas_jq = new Canvas($('#draw'));
+
+                const width = canvas_jq.width();
+                const height = canvas_jq.height();
+                const padding = 20;
+                let win_wh = Math.min(width, height) - padding;
+
+                prev_x = null;
+                prev_y = null;
+                const canvas = canvas_jq.get(0);
+                const ctx = canvas.getContext('2d');
+                var center = {x: width / 2, y: height / 2};
+
+                let x_param = 1;
+                let y_param = 1;
+
+                // cursor position determines params
+                window.addEventListener('mousemove', (e) => {
+                    ctx.clearRect(0, 0, width, height);
+                    x_param = e.clientX / width;
+                    y_param = e.clientY / height;
+                    prev_x = null;
+                    prev_y = null;
+                    win_wh = Math.min(width, height) - padding;
+                });
+
+                function draw(time_diff) {
+
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 2;
+
+                    const speed = 1;
+                    const time_divider = 10000;
+                    const terms = [
+                        {
+                            x: Math.cos(x_param * time_diff / time_divider),
+                            y: Math.sin(y_param * time_diff / time_divider),
+                        },
+                        // {
+                        //     x: -Math.pow(Math.cos(x_param * time_diff / (time_divider * 4)), 2),
+                        //     y: -Math.pow(Math.sin(y_param * time_diff / (time_divider * 4)), 2),
+                        // }
+                    ]
+                    var cumulative_x = 0
+                    var cumulative_y = 0
+                    
+                    for(let i = 0; i < terms.length; i++) {
+                        cumulative_x += terms[i].x;
+                        cumulative_y += terms[i].y;
+                    }
+                    
+                    const new_x = center.x + cumulative_x * win_wh / 2;
+                    const new_y = center.y + cumulative_y * win_wh / 2;
+
+                    win_wh -= 0.00001
+                    if(win_wh < 0) {
+                        win_wh = 0;
+                    }
+
+                    ctx.beginPath();
+                    if(prev_x != null) {
+                        ctx.moveTo(prev_x, prev_y);
+                    } else {
+                        ctx.moveTo(new_x, new_y);
+                    }
+
+                    ctx.lineTo(new_x, new_y);
+                    ctx.stroke();
+
+                    prev_x = new_x;
+                    prev_y = new_y;
+                }
+
+                const start_time = Date.now();
+                let prev_time = start_time;
+                let paused = false;
+                let prev_subframe_time;
+                const render = () => {
+                    // canvas_jq.clear();
+                    if(!paused) {
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.005)';
+                        ctx.fillRect(0, 0, width, height);
+                        // split into 10 chunks
+                        const time = Date.now();
+                        for(let i = 0; i < 1000; i++) {
+                            const time_from_start = time - start_time;
+                            const time_from_frame = time - prev_time;
+
+                            if(!prev_subframe_time) {
+                                prev_subframe_time = time_from_start;
+                            }
+                            const subframe_time = prev_subframe_time + time_from_frame * i/1000;
+                            draw(subframe_time - start_time);
+                            prev_subframe_time = subframe_time;
+                        }
+                        prev_time = time;
+                    }
+                    requestAnimationFrame(render);
+                }
+                window.addEventListener('keydown', (e) => {
+                    if(e.keyCode == 32) {
+                        paused = !paused;
+                    }
+                });
+                render();
+            });
+        </script>
+    </head>
+    <body>
+        <div class='container'>
+            <div id='draw'> </div>
+        </div>
+    </body>
+</html>
+

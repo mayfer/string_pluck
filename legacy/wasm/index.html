@@ -1,0 +1,46 @@
+<html>
+<body>
+  <script src="https://cdn.jsdelivr.net/npm/@assemblyscript/loader/umd/index.js"></script>
+
+  <script>
+
+    document.addEventListener('click', () => {
+      window.audio_context = new AudioContext({sampleRate: 44100});
+      window.audio_context.audioWorklet.addModule("./worker.js").then(() => {
+
+        let audio_node = new AudioWorkletNode(window.audio_context, 'string-processor');
+        audio_node.connect(window.audio_context.destination);
+        
+        fetch('sound.wasm')
+        .then(r => r.arrayBuffer())
+        .then(mod => {
+
+          audio_node.port.postMessage(mod)
+          audio_node.onmessage = (e) => {
+          };
+        });
+      })
+
+      window.audio_context.resume();
+    });
+
+    // loader.instantiate(
+    // fetch('./fib.wasm', {
+    //   env: {
+    //     abort: function(_msg, _file, line, column) {
+    //       console.error("abort called at main.ts:" + line + ":" + column);
+    //     }
+    //   }
+    // })).then((wasmModule) => {
+    //   const { fibm, __getArray } = wasmModule.exports
+
+    //   let a = 10;
+
+    //   let ptr = fib(a)
+    //   let res = __getArray(ptr);
+    //   console.log("hmm", res)
+
+    // });
+  </script>
+</body>
+</html>

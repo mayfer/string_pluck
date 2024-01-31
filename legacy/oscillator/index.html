@@ -1,0 +1,45 @@
+
+
+
+Hello
+
+<script>
+
+document.addEventListener('scroll', (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+})
+document.addEventListener('click', () => {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    let make_oscillator = (destination, freq, amplitude) => {
+        const oscillator = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.value = freq;
+        gain.gain.value = amplitude;
+        oscillator.connect(gain);
+        gain.connect(destination);
+        oscillator.start();
+    }
+
+    let num_sounds = 30;
+    var mgain = audioCtx.createGain();
+    mgain.gain.value = 1 / num_sounds;
+    mgain.connect(audioCtx.destination)
+
+    let num_overtones = 15;
+
+    let HALFTONE_LOG =  0.05776226504666212;
+    for(var i = 0; i< num_sounds; i++) {
+        let freq = Math.exp(Math.log(55*(i+1)) + HALFTONE_LOG*i);
+        for(var o = 0; o < num_overtones; o++) {
+            make_oscillator(mgain, freq*(o+1), 1/(i+1) * Math.pow(1/(o+1), 2));
+        }
+    }
+    
+
+}, {once: true})
+
+</script>

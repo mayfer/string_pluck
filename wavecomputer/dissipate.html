@@ -1,0 +1,147 @@
+
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>string theory, the guitar kind</title>
+        <meta charset='utf-8' />
+        <link rel="shortcut icon" href="#">
+        <!-- libs -->
+        <script type='text/javascript' src='jquery.min.js?1'></script>
+        <script type='text/javascript' src='draw.js?1'></script>
+        <script type='text/javascript' src='drawwave_dissipate.js?1'></script>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            html, body { margin: 0; padding: 0; background: #fff; height:  100%; }
+            .container { height: 100%; margin: 0 auto; 
+    display: flex;           /* establish flex container */
+    flex-direction: column;  /* make main axis vertical */
+    justify-content: center; /* center items vertically, in this case */
+    align-items: center;     /* center items horizontally, in this case */}
+            #draw { width: 100%; height: 100%; outline: 1px solid black; }
+        </style>
+        <script type='text/javascript'>
+            $(document).ready(function() {
+
+                // create a drawing area inside an element
+                var canvas_jq = new Canvas($('#draw'));
+
+                const freqs1 = [];
+                for (let i = 0; i < 50; i++) {
+                    freqs1.push({freq: i * 110, amplitude: Math.random()});
+                }
+
+
+                const freqs = freqs1
+
+                const waves1 = freqs.map(({freq, amplitude}) => new standingWave({freq: freq, gain: amplitude}));
+                const waves2 = freqs.map(({freq, amplitude}) => new standingWave({freq: freq, gain: amplitude}));
+                let waveheight = window.innerHeight / 3;
+                
+                const strings1 = waves1.map(wave => new stringSubCanvas(canvas_jq, wave, 110, waveheight/2, 0));
+                const strings2 = waves2.map(wave => new stringSubCanvas(canvas_jq, wave, 110, waveheight/2, 0));
+
+                const drawWidth = window.innerWidth / 2;
+                let superposed = new superposedStringCanvas(canvas_jq, strings1, waveheight, 0.4, drawWidth);
+
+                let resonator = new superposedStringCanvas(canvas_jq, strings2, waveheight, 0.6, drawWidth + 100);
+
+                let start_time = Date.now();
+                let paused = false;
+
+                function apply_fft(timediff, superposed, resonator) {
+
+                    let points = superposed.getPlotValues(timediff);
+                    const array_of_zeros = Array(100).fill(0);
+                    points.push(...array_of_zeros);
+
+                    let freqs = stringFFT(points);
+
+                    for(let freq in freqs) {
+                        let amp = freqs[freq];                        
+                        freq = parseInt(freq);
+
+                        const resonator_strings = resonator.strings;
+                        for(let i=0; i<resonator_strings.length; i++) {
+                            const string = resonator_strings[i];
+                            if(string.wave.freq == freq) {
+                                string.wave.freq = freq;
+                                string.wave.gain = amp/20
+                            }
+                        }
+
+                    }
+                    
+                }
+                let frame = 0;
+                const render = () => {
+                    // canvas_jq.clear();
+                    if(!paused) {
+                        const time = Date.now();
+                        const timediff = (time - start_time) / 15
+                        superposed.draw(timediff);
+                        
+
+                        // if(frame == 100)
+                        if(resonator.string_width < window.innerWidth) {
+                            // resonator.string_width += 1;
+                            resonator.strings.forEach(s => {
+                                // s.string_width += 1;
+                                // s.wave.freq *= ((s.string_width-1) / (s.string_width));
+                            });
+                            // apply_fft(timediff, superposed, resonator);
+                        }
+
+                        const cutoff_frame = 120;
+                        if(frame == cutoff_frame) {
+                            apply_fft(timediff, superposed, resonator);
+                            resonator.draw(timediff);
+                            paused = true;
+                            const pause_duration = 5000;
+                            setTimeout(() => {
+                                start_time += pause_duration;
+                                paused = false;
+                            }, pause_duration);
+                        }
+                        if(frame > cutoff_frame) {
+                            resonator.draw(timediff);
+                        }
+                    }
+                    frame++;
+                    requestAnimationFrame(render);
+                }
+                window.addEventListener('keydown', (e) => {
+                    if(e.keyCode == 32) {
+                        paused = !paused;
+                    }
+                });
+                render();
+            });
+
+
+            /*
+            this.fourier = function(points) {
+    let freqs = {};
+    let overtone_freqs = this.overtones.map(o => o.freq);
+    for(let freq=this.base_freq; freq<=overtone_freqs[overtone_freqs.length-1]; freq+= this.base_freq) {
+        let resonance = 0;
+        for(let i=0; i<points.length; i++) {
+            let radians = 2 * Math.PI * (freq/(this.base_freq*2)) * i / points.length;
+            resonance += points[i] * -Math.sin(radians)
+        }
+        freqs[freq] = resonance;
+    }
+    //console.log(Object.keys(freqs).map(f => `${f}hz: ${freqs[f]}`).join("\n"));
+    return freqs;
+}
+
+            */
+        </script>
+    </head>
+    <body>
+        <div class='container'>
+            <div id='draw'> </div>
+        </div>
+    </body>
+</html>
+
