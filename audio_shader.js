@@ -92,7 +92,7 @@ function AudioShader(num_strings, num_overtones) {
     for (int i = 0; i < NUM_STRINGS; i++) {
         float ii = float(i);
 
-        float amp = sqrt(2.0 / (ii/2. + 1.0)) / (4.0);
+        float amp = sqrt(2.0 / (ii/2. + 1.0)) / (7.0);
         
         if(amp > 0.00001) {
             for(int j = 0; j < NUM_OVERTONES; j++) {
@@ -212,7 +212,8 @@ function AudioShader(num_strings, num_overtones) {
 
             for (let j = 0; j < samples; j++) {
                 outputL[j] = (pixels[j * 4 + 0] + 256 * pixels[j * 4 + 1]) / 65535 * 2 - 1;
-                outputR[j] = (pixels[j * 4 + 2] + 256 * pixels[j * 4 + 3]) / 65535 * 2 - 1;
+                // outputR[j] = (pixels[j * 4 + 2] + 256 * pixels[j * 4 + 3]) / 65535 * 2 - 1;
+                outputR[j] = outputL[j]
             }
 
             this.blockOffset += 1;
