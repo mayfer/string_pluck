@@ -17,6 +17,7 @@
         <script type='text/javascript' src='notes.js?1'></script>
         <script type='text/javascript' src='audio_shader.js?1'></script>
         <script type='text/javascript' src='plucker.js?1'></script>
+        <script type='text/javascript' src='tonejs_midi.js?1'></script>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
             html, body { margin: 0; padding: 0; background: black; font-family: sans-serif; overflow: hidden; width: 100%; height: 100%; }
@@ -35,19 +36,18 @@
 
             #controls { position: fixed; bottom: 0; left: 0; right: 0; pointer-events: none; zoom: 0.8; }
 
-            #controls .controls-inner { display: flex; flex-direction: row; justify-content: center; align-items: center; padding: 5px; }
-            #controls .item { padding: 10px; background: #fff; color: #000; cursor: pointer; margin: 5px 10px; pointer-events: all; transition: all 0.2s ease-in-out; }
-            #controls .item:hover { box-shadow: 0 0 2px #fff; }
+            #controls .controls-inner { display: flex; flex-direction: row; justify-content: center; align-items: center; padding: 10px; }
+            #controls .item { padding: 10px; background: #fff; color: #000; cursor: pointer; margin: 5px 10px; pointer-events: all; border-radius: 5px; display: flex; flex-direction: row; align-items: center; }
             #controls .item:active { background: #000; color: #fff; }
             #controls .item.inactive { opacity: 0.2; pointer-events: none; }
             #controls .gap { flex: 1; }
             #controls .icon { font-size: 12px; display: inline-block; margin-left: 5px; border-radius: 2px; background: #7c7c7c; color: #fff; padding: 2px; box-shadow: 2px 2px 2px #000; }
             #controls .item.toggle { background: #333; color: #fff; padding: 5px; }
-            #controls .item.toggle .choice {background: none; color: #aaa; display: inline-block; margin: 5px; padding: 5px; }
+            #controls .item.toggle .choice {background: none; color: #aaa; display: inline-block; margin: 2px; padding: 5px; border-radius: 5px; transition: all 0.2s ease-in-out; line-height: 30px; }
             #controls .item.toggle .choice:hover { color: #fff; }
-            #controls .item.toggle .choice.selected { background: #fff; color: #000; transition: all 0.2s ease-in-out; }
+            #controls .item.toggle .choice.selected { background: #fff; color: #000; transition: all 0.05s ease-in-out; }
             #controls .item.toggle .choice.draw-mode { background: #afa; }
-            #controls .item.toggle .choice:active { background: #000; color: #fff; }
+            #controls .item.toggle .choice:active {  }
 
             #presets { position: fixed; top: 20px; left: 20px; right: 20px; bottom: 20px; background: rgba(0,0,0,0.8); color: #fff; padding: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; pointer-events: all; }
             #presets .preset { width: 300px; padding: 20px; background: #eee; color: #000; cursor: pointer; margin: 10px; pointer-events: all; transition: all 0.2s ease-in-out; }
@@ -68,12 +68,14 @@
     </head>
     <body>
         <div class='container'>
-            <div class='info'>pluck</div>
             <div id='draw'></div>
             <div id="controls"></div>
         </div>
         <script type="module">
             import {html, render, Component} from "./preact.htm.module.js"
+
+            let audioShader;
+            window.audioShader = audioShader;
 
             const base_freq = Notes.note_to_freq('A2');
 
@@ -115,6 +117,13 @@
 
             let width_base_freq;
 
+            const getMidiNumberFromFreq = (freq) => {
+                return Math.round(12 * Math.log2(freq/440) + 69);
+            }
+            const getFreqFromMidiNumber = (midi_number) => {
+                return 440 * Math.pow(2, (midi_number - 69) / 12);
+            }
+
 
             const getInitialStrings = (canvas_jq) => {
                 let num_strings = 56
@@ -136,7 +145,7 @@
                 for(var i=0; i<num_strings; i++) {
                     initial_strings.push({
                         string_center: {x: canvas_jq.width()/2, y: 100 + (i+1) * ((height-200) / num_strings)},
-                        string_width: Notes.relative_note(width_base_freq, -i),
+                        string_width: Notes.relative_note(width_base_freq, -i) * 2,
                         angle: 0, // i * Math.PI / 64
                     });
                 }
@@ -278,7 +287,6 @@
 
 
             const resetAndAddStrings = function(canvas_jq, audioShader, strings, options={skip_audio: false}) {
-                midi_string_map = {};
                 let width = canvas_jq.width();
                 let height = canvas_jq.height();
 
@@ -298,34 +306,42 @@
 
                 pluckableStrings.length = 0;
 
-                // save strings to localstorage
-                localStorage.setItem('strings', JSON.stringify(strings));
+                midi_string_map = {};
 
                 for(let i=0; i<strings.length; i++) {
                     const string = strings[i];
                     const overtones = [];
-                    let freq = parseInt(base_freq * width_base_freq/string.string_width);
+                    let freq = string.freq ? string : parseInt(base_freq * width_base_freq/string.string_width);
                     for(let j=0; j<num_overtones; j++) {
                         overtones.push({freq: (j+1) * freq, amplitude: 1});
                     }
+                    const midi_number = getMidiNumberFromFreq(freq);
+                    let {note, error} = Notes.freq_to_note(freq);
+
                     var drawWave = new pluckableString({
                         id: i,
                         canvas: canvas_jq.get(0),
+                        freq,
+                        midi_number,
+                        note,
+                        note_micro_offset: error,
                         overtones,
                         wave_height: 50,
                         string_width: string.string_width,
                         string_center: string.string_center,
-                        midi_number: string.midi_number,
                         angle: string.angle,
                         duration,
                         audio: audioShader,
-                        string_slack: Math.max(5, Math.min(20, string.string_width/5)),
+                        // string_slack: Math.max(5, Math.min(20, string.string_width/5)),
+                        string_slack: 20,
                     })
                     pluckableStrings.push(drawWave);
-                    midi_string_map[string.midi_number] = drawWave;
+                    midi_string_map[midi_number] = drawWave;
                 }
 
                 pluckableStrings.forEach(s => s.draw_still());
+
+                localStorage.setItem('strings', JSON.stringify(strings));
 
                 return { audioShader };
 
@@ -357,6 +373,11 @@
                 var canvas = canvas_jq.get(0);
                 var context = canvas.getContext("2d");
 
+                const fill_styles_per_mode = {
+                    [CanvasModes.pluck]: "rgba(0, 0, 0, 1.0)",
+                    [CanvasModes.draw]: "rgba(0, 50, 0, 0.5)",
+                    [CanvasModes.erase]: "rgba(50, 0, 0, 0.5)",
+                }
                 context.fillStyle = "rgba(0, 0, 0, 0.5)";
                 context.lineWidth = 2;
                 context.strokeStyle = "#fff";
@@ -374,7 +395,7 @@
                 }
 
                 function finish_drawing_string() {
-                    let newStrings = pluckableStrings.map(s => { return {string_center: s.string_center, string_width: s.string_width, angle: s.angle, midi_number: s.midi_number} });
+                    let newStrings = pluckableStrings.map(s => { return {string_center: s.string_center, string_width: s.string_width, angle: s.angle} });
 
                     if(window.canvas_mode == CanvasModes.draw && draw_start) {
                         let offsetStart = draw_start;
@@ -430,7 +451,7 @@
                                 }
                             }
                         }
-                        let newStrings = pluckableStrings.filter((s, i) => !string_ids_to_erase.includes(i)).map(s => { return {string_center: s.string_center, string_width: s.string_width, angle: s.angle, midi_number: s.midi_number} });
+                        let newStrings = pluckableStrings.filter((s, i) => !string_ids_to_erase.includes(i)).map(s => { return {string_center: s.string_center, string_width: s.string_width, angle: s.angle} });
 
                         if(newStrings.length < pluckableStrings.length) {
                             let { audioShader: newAudioShader } = resetAndAddStrings(canvas_jq, audioShader, newStrings, {skip_audio: window.canvas_mode != CanvasModes.pluck});
@@ -473,23 +494,29 @@
 
 
                 
-                let start;
+                let start_time;
                 let note_index = 0;
                 let pluck_index = 0;
                 let midi_track;
                 let notes;
-                window.pause = true
+                window.midi_paused = true
                 
-                let speed = 0.75;
-                let pluck_duration = 250;
+                let speed = 1;
+                let pluck_duration = 150;
                 
                 let notes_map = {}
                 let notes_map_cursors = {}
 
                 async function set_remote_midi_track(url) {
-                    let midi_json = await fetch(url).then(r => r.json());
+                    let midi_file = await fetch(url).then(r => r.arrayBuffer());
+                    // sate to blob
+                    let midi_blob = new Blob([midi_file], {type: 'audio/midi'});
+                    // create a URL for the blob
+                    let midi_url = URL.createObjectURL(midi_blob);
+                    // use tonejs to load the midi file
+                    let midi_json = await Midi.fromUrl(midi_url);
+                    console.log(midi_json);
                     set_midi_track(midi_json);
-                    debugger
                 }
                 
                 function set_midi_track(new_midi_track) {
@@ -504,6 +531,7 @@
                         }
                         notes_map[note.midi].push(note);
                     })
+                    window.midi_paused = false;
                 };
 
                 function string_width_to_freq(string_width, width_base_freq) {
@@ -527,11 +555,14 @@
                         return;
                     }
                     if(last_frame_time && Date.now() - last_frame_time > 1000) {
-                        window.pause = true
+                        window.midi_paused = true
+                        console.log('pausing due to inactivity?')
                     }
                     last_frame_time = Date.now();
 
                     let one_sec_ms = 1000 * (1/speed);
+
+                    context.fillStyle = fill_styles_per_mode[window.canvas_mode];
 
                     context.fillRect(0, 0, context.width, context.height);
                     pluckableStrings.forEach(s => {
@@ -540,27 +571,32 @@
                         else s.draw_still();
                     });
 
-                    if(!start) {
-                        start = Date.now();
+                    if(!start_time) {
+                        start_time = Date.now();
                     }
-                    let time_diff = Date.now()-start;
+                    let time_diff = Date.now()-start_time;
 
                     // if(!document.hasFocus()) {
-                    //     window.pause = true;
+                    //     window.midi_paused = true;
                     // }
-                    if(!window.pause) {
+                    if(!window.midi_paused) {
                         Object.keys(notes_map_cursors).forEach(midi_num => {
                             let cursor = notes_map_cursors[midi_num];
                             let note = notes_map[midi_num][cursor];
                             if(note) {
                                 let plucking_string = midi_string_map[note.midi]
-                                let pluck_time = Math.max((plucking_string.prev_note_time || 0)+50, note.time * one_sec_ms - pluck_duration);
-                                if(time_diff >= pluck_time) {
-                                    let offsetX = plucking_string.pluck_offset_x ? plucking_string.pluck_offset_x : plucking_string.string_center.x + (Math.random() * 2 - 1)*plucking_string.string_width/2;
-                                    let progress = (time_diff - pluck_time) / pluck_duration;
-                                    let velocity = note.velocity ? note.velocity : 1;
-                                    let offsetY = plucking_string.string_center.y + progress * velocity * plucking_string.string_slack;
-                                    plucking_string.set_pluck_offsets(offsetX, offsetY);
+                                if(plucking_string) {
+                                    const prev_note = notes_map[midi_num][cursor-1];
+                                    const _pluck_duration = prev_note ?  Math.min(pluck_duration, (note.time - prev_note.time) * one_sec_ms / 3) : pluck_duration;
+                                    // const _pluck_duration = Math.min(pluck_duration, 
+                                    let pluck_time = Math.max((plucking_string.prev_note_time || 0)+50, note.time * one_sec_ms - _pluck_duration);
+                                    if(time_diff >= pluck_time) {
+                                        let offsetX = plucking_string.pluck_offset_x ? plucking_string.pluck_offset_x : plucking_string.string_center.x + (Math.random() * 2 - 1)*plucking_string.string_width/2;
+                                        let progress = (time_diff - pluck_time) / _pluck_duration;
+                                        let velocity = note.velocity ? note.velocity : 1;
+                                        let offsetY = plucking_string.string_center.y + progress * velocity * plucking_string.string_slack;
+                                        plucking_string.set_pluck_offsets(offsetX, offsetY);
+                                    }
                                 }
                             }
                         })
@@ -572,13 +608,13 @@
                         if(time_diff >= note_time) {
                             if(string) {
                                 string.pluck();
+                                string.prev_note_time = note_time;
                             }
                             note_index++;
                             notes_map_cursors[note.midi]++
 
-                            string.prev_note_time = note_time;
                             if(note_index >= notes.length) {
-                                window.pause = true;
+                                window.midi_paused = true;
                             }
                         }
                     }
@@ -623,17 +659,29 @@
                                 context.save();
                                 context.fillStyle = "#f00";
                                 context.font = "20px Arial";
-                                context.fillText("Erasing", draw_end.x + label_finger_offset.x, draw_end.y + label_finger_offset.y);
+                                context.fillText("Erase", draw_end.x - 30, draw_end.y + label_finger_offset.y);
                                 context.restore();
                             }
                         }
 
 
                     }
+
+
+
+                    for(let coordinate of Object.values(touchInstances)) {
+                        // draw circle where touch is
+                        context.save();
+                        context.beginPath();
+                        context.arc(coordinate.x, coordinate.y, 5, 0, 2 * Math.PI, false);
+                        context.fillStyle = '#ffffff44';
+                        context.fill();
+                        context.restore();
+                    }
                 }
 
                 
-                const touchInstances = {};
+                let touchInstances = {};
 
                 setTimeout(() => {
                     window.started = true
@@ -663,7 +711,14 @@
                 $(window).blur(function(){
                     //strings.forEach(s => s.stop_sound());
                     //init()
+                    touchInstances = {};
                 });
+                $(document).on('mouseout', function(event) {
+                    if (!event.relatedTarget) {
+                        touchInstances = {};
+                    }
+                });
+
 
                 let auto_pluck_distance = 5;
 
@@ -715,7 +770,9 @@
                         window.idle = false;
                     }
                     idle_timeout = setTimeout(() => {
-                        window.idle = true;
+                        if(window.midi_paused) {
+                            window.idle = true;
+                        }
                     }, 15000);
 
 
@@ -852,6 +909,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                         this.state = {
                             canvas_mode: window.canvas_mode,
                             snap_to_note: window.snap_to_note,
+                            show_presets: false,
                         }
                     }
                     componentDidMount() {
@@ -873,6 +931,8 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                     
                     render() {
                         const touch_device = 'ontouchstart' in document.documentElement;
+                        const preset_slugs = JSON.parse(localStorage.getItem('preset_slugs')) || [];
+                        const presets = preset_slugs.map(slug => JSON.parse(localStorage.getItem('preset:'+slug)));
                         const { canvas_mode } = this.state;
                         return html`
                             <div class='controls-inner'>
@@ -898,6 +958,15 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                     }}>
                                         🧹 Erase
                                     </span>
+
+                                    <span class='choice' onClick=${() => {
+                                        start_time = Date.now() + 1000;
+                                        // get midi from url hash like #rach3.mid
+                                        const midi_filename = window.location.hash.replace('#', '') || 'rach3.mid';
+                                        set_remote_midi_track("/legacy/midis/"+midi_filename);
+                                    }}>
+                                        MIDI
+                                    </span>
                                 </div>
 
                                 <div class='item toggle ${canvas_mode == CanvasModes.draw ? '' : 'inactive'}' onClick=${() => {
@@ -909,9 +978,27 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                 </div>
                                 <div class='gap'></div>
                                 <div class='item' onClick=${() => {
+                                    const name = prompt('Save preset as');
+                                    // convert name to slug
+                                    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '').replace(/^-/, '');
+                                    // save to localstorage
+                                    const preset_slugs = JSON.parse(localStorage.getItem('preset_slugs')) || [];
+                                    if(preset_slugs.includes(slug)) {
+                                        const overwrite = confirm('Overwrite existing preset?');
+                                        if(!overwrite) {
+                                            return;
+                                        }
+                                    }
+                                    preset_slugs.push(slug);
+                                    localStorage.setItem('preset_slugs', JSON.stringify(preset_slugs));
+                                    localStorage.setItem('preset:'+slug, JSON.stringify({name, slug, strings: pluckableStrings.map(s => { return {string_center: s.string_center, string_width: s.string_width, angle: s.angle} })}));
+                                }}>
+                                    Save
+                                </div>
+                                <div class='item' onClick=${() => {
                                     this.setState({show_presets: !this.state.show_presets});
                                 }}>
-                                    Presets
+                                    Load
                                 </div>
                                 <div class='item' onClick=${() => {
                                     resetAndAddStrings(canvas_jq, audioShader, []);
@@ -952,6 +1039,15 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                         <div class='preset-name'>Chords</div>
                                         <div class='preset-description'>C, G, Am, F chords</div>
                                     </div>
+                                    ${presets.map(preset => html`
+                                        <div class='preset' onClick=${() => {
+                                            this.setState({show_presets: false});
+                                            resetAndAddStrings(canvas_jq, audioShader, preset.strings);
+                                        }}>
+                                            <div class='preset-name'>${preset.name}</div>
+                                            <div class='preset-description'>${preset.strings.length} strings</div>
+                                        </div>
+                                    `)}
                                 </div>
                             ` : html``}
                         `

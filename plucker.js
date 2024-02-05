@@ -1,9 +1,12 @@
 X_INCREMENT = 5;
 
-function pluckableString({id, canvas, overtones, wave_height, string_width, string_center, midi_number, angle, duration, audio, string_slack}) {
+function pluckableString({id, canvas, freq, midi_number, overtones, wave_height, string_width, string_center, angle, duration, audio, string_slack}) {
     this.audio = audio;
     this.overtones = overtones; // {freq, amplitude}
     this.id = id;
+    this.freq = freq;
+    this.note_name = Notes.freq_to_note(freq).note;
+    this.midi_number = midi_number;
 
     this.context = canvas.getContext("2d");
     this.lineWidth = 3;
@@ -31,8 +34,6 @@ function pluckableString({id, canvas, overtones, wave_height, string_width, stri
     this.string_width = string_width;
     this.string_position = {x: string_center.x - string_width/2, y: string_center.y};
     this.string_height = wave_height;
-
-    this.midi_number = midi_number;
 
     this.base_freq = overtones[0].freq;
     this.string_slack = string_slack ||  30;
@@ -99,17 +100,18 @@ function pluckableString({id, canvas, overtones, wave_height, string_width, stri
     this.draw = function() {
         this.time_diff = Math.min(this.duration, this.start_time ? Date.now() - this.start_time : 0);
 
-        if(this.time_diff > this.duration ) {
+        if(this.time_diff >= this.duration ) {
             this.playing = false;
             this.draw_still();
+            this.sync_worklet();
             return;
         }
         let context = this.context;
         this.context.lineWidth = this.lineWidth;
         context.save();
-        let brightness = 0.1 + Math.pow((this.duration - this.time_diff)/this.duration, 4);
-        let pluckness = Math.pow((this.duration - this.time_diff)/this.duration, 15) / 3;
-        brightness = Math.max(0, Math.min(1, brightness));
+        let progress = (this.duration - this.time_diff)/this.duration;
+        let brightness = Math.max(0, Math.min(1, 0.1 + Math.pow(progress, 4)));
+        let pluckness = Math.pow(progress, 15) / 3;
         context.strokeStyle = "rgba("+Math.floor((1-pluckness)*255)+", "+Math.floor((1-pluckness)*255)+", 255.0, "+brightness+")"
         context.translate(this.string_center.x, this.string_center.y);
         context.rotate(this.angle);
@@ -135,6 +137,12 @@ function pluckableString({id, canvas, overtones, wave_height, string_width, stri
         }
         this.context.lineTo(this.string_width + this.string_position.x, this.string_position.y);
         context.stroke();
+
+        // write note name
+        context.font = "20px Arial";
+        context.fillStyle = "rgba(255, 255, 255, "+(brightness-0.1)+")"
+        context.fillText(this.note_name, this.string_width + this.string_position.x + 10, this.string_position.y + 5);
+        
         context.restore();
     };
 
@@ -153,7 +161,8 @@ function pluckableString({id, canvas, overtones, wave_height, string_width, stri
     this.draw_pluck = function(offsetX, offsetY) {
         let context = this.context;
         context.save();
-        context.strokeStyle = "rgba(255, 255, 200, 0.7)"
+        const plucking_color = "rgba(155, 100, 225, 1.0)"
+        context.strokeStyle = plucking_color
 
         context.translate(this.string_center.x, this.string_center.y);
         context.rotate(this.angle);
@@ -168,6 +177,10 @@ function pluckableString({id, canvas, overtones, wave_height, string_width, stri
             }
         }
 
+        // write note name
+        context.font = "20px Arial";
+        context.fillStyle = plucking_color;
+        context.fillText(this.note_name, this.string_width + this.string_position.x + 10, this.string_position.y + 5);
 
 
         context.fillStyle = "#c8b1e3"
@@ -182,6 +195,8 @@ function pluckableString({id, canvas, overtones, wave_height, string_width, stri
         context.lineTo(offsetX, offsetY);
         context.lineTo(this.string_position.x + this.string_width, this.string_position.y);
         context.stroke();
+
+
 
         context.restore();
 
