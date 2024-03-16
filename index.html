@@ -1,676 +1,871 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <title>string theory, the guitar kind</title>
-        <meta charset='utf-8' />
-        <link rel="shortcut icon" href="#">
-        <meta name="twitter:card" content="summary">
-        <meta name="twitter:site" content="@mayfer">
-        <meta name="twitter:title" content="string simulator">
-        <meta name="twitter:description" content="This is an interactive string simulator that uses basic Fourier math to generate audio & visuals according to where on the string you pluck from. The audio math is done on the GPU in WebGL">
-        <meta name="twitter:image" content="https://i.imgur.com/DvnQIif.png">
 
-        <!-- libs -->
-        <script type='text/javascript' src='jquery.min.js?1'></script>
-        <script type='text/javascript' src='unmute.js?1'></script>
-        <script type='text/javascript' src='draw.js?1'></script>
-        <script type='text/javascript' src='notes.js?1'></script>
-        <script type='text/javascript' src='audio_shader.js?1'></script>
-        <script type='text/javascript' src='plucker.js?1'></script>
-        <script type='text/javascript' src='tonejs_midi.js?1'></script>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <style>
-            html, body { margin: 0; padding: 0; background: black; font-family: sans-serif; overflow: hidden; width: 100%; height: 100%; }
-            .info { position: absolute; top: 10px; left: 10px; right: 10px; text-align: center; color: #888; pointer-events: none; }
-            .container { height: 100%; margin: 0 auto; 
-    display: flex;           /* establish flex container */
-    flex-direction: column;  /* make main axis vertical */
-    justify-content: center; /* center items vertically, in this case */
-    align-items: center;     /* center items horizontally, in this case */
-    
-    /* prevent selection of text */
-    user-select: none;
-    
-}
-            #draw { width: 100%; height: 100%; }
+<head>
+    <title>string theory, the guitar kind</title>
+    <meta charset='utf-8' />
+    <link rel="shortcut icon" href="#">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@mayfer">
+    <meta name="twitter:title" content="string simulator">
+    <meta name="twitter:description"
+        content="This is an interactive string simulator that uses basic Fourier math to generate audio & visuals according to where on the string you pluck from. The audio math is done on the GPU in WebGL">
+    <meta name="twitter:image" content="https://i.imgur.com/DvnQIif.png">
 
-            #controls { position: fixed; bottom: 0; left: 0; right: 0; pointer-events: none; zoom: 0.8; }
+    <!-- libs -->
+    <script type='text/javascript' src='jquery.min.js?1'></script>
+    <script type='text/javascript' src='unmute.js?1'></script>
+    <script type='text/javascript' src='draw.js?1'></script>
+    <script type='text/javascript' src='notes.js?1'></script>
+    <script type='text/javascript' src='audio_shader.js?1'></script>
+    <script type='text/javascript' src='plucker.js?1'></script>
+    <script type='text/javascript' src='tonejs_midi.js?1'></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            background: black;
+            font-family: sans-serif;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+        }
 
-            #controls .controls-inner { display: flex; flex-direction: row; justify-content: center; align-items: center; padding: 10px; }
-            #controls .item { padding: 10px; background: #fff; color: #000; cursor: pointer; margin: 5px 10px; pointer-events: all; border-radius: 5px; display: flex; flex-direction: row; align-items: center; }
-            #controls .item:active { background: #000; color: #fff; }
-            #controls .item.inactive { opacity: 0.2; pointer-events: none; }
-            #controls .gap { flex: 1; }
-            #controls .icon { font-size: 12px; display: inline-block; margin-left: 5px; border-radius: 2px; background: #7c7c7c; color: #fff; padding: 2px; box-shadow: 2px 2px 2px #000; }
-            #controls .item.toggle { background: #333; color: #fff; padding: 5px; }
-            #controls .item.toggle .choice {background: none; color: #aaa; display: inline-block; margin: 2px; padding: 5px; border-radius: 5px; transition: all 0.2s ease-in-out; line-height: 30px; }
-            #controls .item.toggle .choice:hover { color: #fff; }
-            #controls .item.toggle .choice.selected { background: #fff; color: #000; transition: all 0.05s ease-in-out; }
-            #controls .item.toggle .choice.draw-mode { background: #afa; }
-            #controls .item.toggle .choice:active {  }
+        .info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            text-align: center;
+            color: #888;
+            pointer-events: none;
+        }
 
-            #presets { position: fixed; top: 20px; left: 20px; right: 20px; bottom: 20px; background: rgba(0,0,0,0.8); color: #fff; padding: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; pointer-events: all; }
-            #presets .preset { width: 300px; padding: 20px; background: #eee; color: #000; cursor: pointer; margin: 10px; pointer-events: all; transition: all 0.2s ease-in-out; }
-            #presets .preset:hover { background: #fff; }
-            #presets .preset-name { font-size: 20px; font-weight: bold; }
-            #presets .preset-description { font-size: 12px; }
-            #presets .preset-button { background: #000; color: #fff; padding: 5px; margin-top: 10px; }
+        .container {
+            height: 100%;
+            margin: 0 auto;
+            display: flex;
+            /* establish flex container */
+            flex-direction: column;
+            /* make main axis vertical */
+            justify-content: center;
+            /* center items vertically, in this case */
+            align-items: center;
+            /* center items horizontally, in this case */
 
-            #presets .close { cursor: pointer; font-size: 20px; text-align: right; width: 340px; padding: 20px; margin: 0;}
+            /* prevent selection of text */
+            user-select: none;
 
-            @media only screen and (max-width: 800px) {
-                #controls { zoom: 0.6; }
-                #controls .controls-inner { padding: 5px; }
-                #controls .item.toggle { padding: 2px; }
-                #controls .icon { display: none; }
+        }
+
+        #draw {
+            width: 100%;
+            height: 100%;
+        }
+
+        #controls {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            pointer-events: none;
+            zoom: 0.8;
+        }
+
+        #controls .controls-inner {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+        }
+
+        #controls .item {
+            padding: 10px;
+            background: #fff;
+            color: #000;
+            cursor: pointer;
+            margin: 5px 10px;
+            pointer-events: all;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+        }
+
+        #controls .item:active {
+            background: #000;
+            color: #fff;
+        }
+
+        #controls .item.inactive {
+            opacity: 0.2;
+            pointer-events: none;
+        }
+
+        #controls .gap {
+            flex: 1;
+        }
+
+        #controls .icon {
+            font-size: 12px;
+            display: inline-block;
+            margin-left: 5px;
+            border-radius: 2px;
+            background: #7c7c7c;
+            color: #fff;
+            padding: 2px;
+            box-shadow: 2px 2px 2px #000;
+        }
+
+        #controls .item.toggle {
+            background: #333;
+            color: #fff;
+            padding: 5px;
+        }
+
+        #controls .item.toggle .choice {
+            background: none;
+            color: #aaa;
+            display: inline-block;
+            margin: 2px;
+            padding: 5px;
+            border-radius: 5px;
+            transition: all 0.2s ease-in-out;
+            line-height: 30px;
+        }
+
+        #controls .item.toggle .choice:hover {
+            color: #fff;
+        }
+
+        #controls .item.toggle .choice.selected {
+            background: #fff;
+            color: #000;
+            transition: all 0.05s ease-in-out;
+        }
+
+        #controls .item.toggle .choice.draw-mode {
+            background: #afa;
+        }
+
+        #controls .item.toggle .choice:active {}
+
+        #presets {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            bottom: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: all;
+        }
+
+        #presets .preset {
+            width: 300px;
+            padding: 20px;
+            background: #eee;
+            color: #000;
+            cursor: pointer;
+            margin: 10px;
+            pointer-events: all;
+            transition: all 0.2s ease-in-out;
+        }
+
+        #presets .preset:hover {
+            background: #fff;
+        }
+
+        #presets .preset-name {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        #presets .preset-description {
+            font-size: 12px;
+        }
+
+        #presets .preset-button {
+            background: #000;
+            color: #fff;
+            padding: 5px;
+            margin-top: 10px;
+        }
+
+        #presets .close {
+            cursor: pointer;
+            font-size: 20px;
+            text-align: right;
+            width: 340px;
+            padding: 20px;
+            margin: 0;
+        }
+
+        @media only screen and (max-width: 800px) {
+            #controls {
+                zoom: 0.6;
             }
-        </style>
-    </head>
-    <body>
-        <div class='container'>
-            <div id='draw'></div>
-            <div id="controls"></div>
-        </div>
-        <script type="module">
-            import {html, render, Component} from "./preact.htm.module.js"
 
-            let audioShader;
-            window.audioShader = audioShader;
-
-            const base_freq = Notes.note_to_freq('A2');
-
-            const CanvasModes = {
-                pluck: 'pluck',
-                draw: 'draw',
-                erase: 'erase',
-            }
-            window.canvas_mode = CanvasModes.pluck;
-
-            let draw_start = null
-            let draw_end = null
-            
-            jQuery.event.special.touchstart = {
-                setup: function( _, ns, handle ) {
-                    this.addEventListener("touchstart", handle, { passive: false });
-                }
-            };
-            jQuery.event.special.touchmove = {
-                setup: function( _, ns, handle ) {
-                    this.addEventListener("touchmove", handle, { passive: false });
-                }
-            };
-            jQuery.event.special.wheel = {
-                setup: function( _, ns, handle ){
-                    this.addEventListener("wheel", handle, { passive: false });
-                }
-            };
-            jQuery.event.special.mousewheel = {
-                setup: function( _, ns, handle ){
-                    this.addEventListener("mousewheel", handle, { passive: false });
-                }
-            };
-
-            let midi_string_map = {};
-            let midi_number_a1 = 33;
-                
-            let pluckableStrings = [];
-
-            let width_base_freq;
-
-            const getMidiNumberFromFreq = (freq) => {
-                return Math.round(12 * Math.log2(freq/440) + 69);
-            }
-            const getFreqFromMidiNumber = (midi_number) => {
-                return 440 * Math.pow(2, (midi_number - 69) / 12);
+            #controls .controls-inner {
+                padding: 5px;
             }
 
-
-            const getInitialStrings = (canvas_jq) => {
-                let num_strings = 56
-                
-                let initial_strings = JSON.parse(localStorage.getItem('strings')) || [];
-
-                if(!initial_strings.length) {
-                    return get72strings(canvas_jq);
-                }
-
-                return initial_strings;
+            #controls .item.toggle {
+                padding: 2px;
             }
 
-            const get72strings = (canvas_jq) => {
-                let num_strings = 72;
-                let initial_strings = [];
-                let width = canvas_jq.width();
-                let height = canvas_jq.height();
-                for(var i=0; i<num_strings; i++) {
-                    initial_strings.push({
-                        string_center: {x: canvas_jq.width()/2, y: 100 + (i+1) * ((height-200) / num_strings)},
-                        string_width: Notes.relative_note(width_base_freq, -i) * 2,
-                        angle: 0, // i * Math.PI / 64
-                    });
-                }
+            #controls .icon {
+                display: none;
+            }
+        }
+    </style>
+</head>
 
-                return initial_strings;
+<body>
+    <div class='container'>
+        <div id='draw'></div>
+        <div id="controls"></div>
+    </div>
+    <script type="module">
+        import { html, render, Component } from "./preact.htm.module.js"
+
+        let audioShader;
+        window.audioShader = audioShader;
+
+        const base_freq = Notes.note_to_freq('A2');
+
+        const CanvasModes = {
+            pluck: 'pluck',
+            draw: 'draw',
+            erase: 'erase',
+        }
+        window.canvas_mode = CanvasModes.pluck;
+
+        let draw_start = null
+        let draw_end = null
+
+        jQuery.event.special.touchstart = {
+            setup: function (_, ns, handle) {
+                this.addEventListener("touchstart", handle, { passive: false });
+            }
+        };
+        jQuery.event.special.touchmove = {
+            setup: function (_, ns, handle) {
+                this.addEventListener("touchmove", handle, { passive: false });
+            }
+        };
+        jQuery.event.special.wheel = {
+            setup: function (_, ns, handle) {
+                this.addEventListener("wheel", handle, { passive: false });
+            }
+        };
+        jQuery.event.special.mousewheel = {
+            setup: function (_, ns, handle) {
+                this.addEventListener("mousewheel", handle, { passive: false });
+            }
+        };
+
+        let midi_string_map = {};
+        let midi_number_a1 = 33;
+
+        let pluckableStrings = [];
+
+        let width_base_freq;
+
+
+
+        function string_width_to_freq(string_width, width_base_freq) {
+            if (string_width == 0) {
+                return 0;
+            }
+            return Math.round(base_freq * width_base_freq / string_width);
+        }
+        function freq_to_string_width(freq, width_base_freq) {
+            if (freq == 0) {
+                return 0;
+            }
+            return base_freq * width_base_freq / freq;
+        }
+
+
+        const getMidiNumberFromFreq = (freq) => {
+            return Math.round(12 * Math.log2(freq / 440) + 69);
+        }
+        const getFreqFromMidiNumber = (midi_number) => {
+            return 440 * Math.pow(2, (midi_number - 69) / 12);
+        }
+
+
+        const getInitialStrings = (canvas_jq) => {
+            let num_strings = 56
+
+            let initial_strings = JSON.parse(localStorage.getItem('strings')) || [];
+
+            if (!initial_strings.length) {
+                return getChordStrings(canvas_jq);
             }
 
-            const getTwoFullOctaveStrings = (canvas_jq) => {
-                let num_strings = 60;
-                let initial_strings = [];
-                let width = canvas_jq.width();
-                let height = canvas_jq.height();
-                for(var i=0; i<num_strings; i++) {
-                    initial_strings.push({
-                        string_center: {x: canvas_jq.width()/2, y: 100 + (i+1) * ((height-200) / num_strings)},
-                        string_width: Notes.relative_note(width_base_freq*2, -(i)),
-                        angle: 0, // i * Math.PI / 64
-                    });
-                }
+            return initial_strings;
+        }
 
-                return initial_strings;
-
+        const get72strings = (canvas_jq) => {
+            let num_strings = 72;
+            let initial_strings = [];
+            let width = canvas_jq.width();
+            let height = canvas_jq.height();
+            for (var i = 0; i < num_strings; i++) {
+                initial_strings.push({
+                    string_center: { x: canvas_jq.width() / 2, y: 100 + (i + 1) * ((height - 200) / num_strings) },
+                    string_width: Notes.relative_note(width_base_freq, -i) * 2,
+                    freq: string_width_to_freq(Notes.relative_note(width_base_freq, -i) * 2, width_base_freq),
+                    angle: 0, // i * Math.PI / 64
+                });
             }
 
-            const getSpiralingStrings = (canvas_jq) => {
-                // for(var i=0; i<=40; i++) {
-                //     initial_strings.push({
-                //         string_center: {x: canvas_jq.width()/2 + canvas_jq.width()/4, y: 100 + (i+1) * 15},
-                //         string_width: Notes.relative_note(440, -i*1) * 1,
-                //         angle: 0, // i * Math.PI / 64
-                //     });
-                // }
-                // for(var i=0; i<=40; i++) {
-                //     initial_strings.push({
-                //         string_center: {x: canvas_jq.width()/2 - canvas_jq.width()/4, y: 100 + (i+1) * 15},
-                //         string_width: Notes.relative_note(440, -i*1) * 1,
-                //         angle: 0, // i * Math.PI / 64
-                //     });
-                // }
-                let num_strings = 72
-                const initial_strings = [];
+            return initial_strings;
+        }
 
-                let width = canvas_jq.width();
-                let height = canvas_jq.height();
-                const total_angle = Math.PI * 2;
-                for(var i=0; i<num_strings; i++) {
-                    initial_strings.push({
-                        string_center: {
-                            x:  (width/3) * Math.sin((total_angle * i / num_strings)) + width/2,
-                            y:  (height/3) * Math.cos((total_angle * i / num_strings)) + height/2,
-                        },
-                        // string_center: {x: width/2, y: 100 + (i+1) * ((height-200) / num_strings)},
-                        //string_width: Notes.relative_note(width_base_freq, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
-                        string_width: Notes.relative_note(width_base_freq*2, -i),
-                        angle: Math.PI * (3/4) + i * total_angle / num_strings,
-                    });
-                }
-
-                return initial_strings;
+        const getTwoFullOctaveStrings = (canvas_jq) => {
+            let num_strings = 60;
+            let initial_strings = [];
+            let width = canvas_jq.width();
+            let height = canvas_jq.height();
+            for (var i = 0; i < num_strings; i++) {
+                initial_strings.push({
+                    string_center: { x: canvas_jq.width() / 2, y: 100 + (i + 1) * ((height - 200) / num_strings) },
+                    string_width: Notes.relative_note(width_base_freq * 2, -(i)),
+                    freq: width_base_freq * 2 / Math.pow(2, i / 12),
+                    angle: 0, // i * Math.PI / 64
+                });
             }
 
-            const getChordStrings = (canvas_jq) => {
+            return initial_strings;
 
-                let width = canvas_jq.width();
-                let height = canvas_jq.height();
-                // C, G, Am, F chords
-                const midi_notes = [
-                    // C major
-                    48,
-                    52,
-                    55,
-                    60,
-                    64,
+        }
 
-                    0,
-                    // G major
-                    55,
-                    59,
-                    62,
-                    67,
-                    71,
-                    0,
-                    // A minor
-                    57,
-                    60,
-                    64,
-                    69,
-                    72,
+        const getSpiralingStrings = (canvas_jq) => {
+            // for(var i=0; i<=40; i++) {
+            //     initial_strings.push({
+            //         string_center: {x: canvas_jq.width()/2 + canvas_jq.width()/4, y: 100 + (i+1) * 15},
+            //         string_width: Notes.relative_note(440, -i*1) * 1,
+            //         angle: 0, // i * Math.PI / 64
+            //     });
+            // }
+            // for(var i=0; i<=40; i++) {
+            //     initial_strings.push({
+            //         string_center: {x: canvas_jq.width()/2 - canvas_jq.width()/4, y: 100 + (i+1) * 15},
+            //         string_width: Notes.relative_note(440, -i*1) * 1,
+            //         angle: 0, // i * Math.PI / 64
+            //     });
+            // }
+            let num_strings = 72
+            const initial_strings = [];
 
-                    0,
-                    // F major
-                    53,
-                    57,
-                    60,
-                    65,
-                    69,
+            let width = canvas_jq.width();
+            let height = canvas_jq.height();
+            const total_angle = Math.PI * 2;
+            for (var i = 0; i < num_strings; i++) {
+                initial_strings.push({
+                    string_center: {
+                        x: (width / 3) * Math.sin((total_angle * i / num_strings)) + width / 2,
+                        y: (height / 3) * Math.cos((total_angle * i / num_strings)) + height / 2,
+                    },
+                    // string_center: {x: width/2, y: 100 + (i+1) * ((height-200) / num_strings)},
+                    //string_width: Notes.relative_note(width_base_freq, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
+                    string_width: Notes.relative_note(width_base_freq * 2, -i),
+                    freq: width_base_freq * 2 / Math.pow(2, i / 12),
+                    angle: Math.PI * (3 / 4) + i * total_angle / num_strings,
+                });
+            }
 
+            return initial_strings;
+        }
 
-                ]
-                const initial_strings = [];
+        const getChordStrings = (canvas_jq) => {
 
-                const num_chords = midi_notes.filter(n => n == 0).length+1;
-                const chunksize = 6;
-                const max_vertical = (height-200)/50;
-                const columns = 2
-                const rows = 2
-                const chord_areas = [];
-                let note_i = 0;
-                for(var i=0; i<columns; i++) {
-                    for(var j=0; j<rows; j++) {
-                        const x = 100 + i * (width-200) / columns;
-                        const y = 100 + j * (height-200) / rows;
-                        const w = (width-200) / columns;
-                        const h = (height-200) / rows;
-                        chord_areas.push({x, y, w, h});
-                        console.log(x, y, w, h);
+            let width = canvas_jq.width();
+            let height = canvas_jq.height();
+            // C, G, Am, F chords
+            const midi_notes = [
+                // C major
+                48,
+                52,
+                55,
+                60,
+                64,
 
-                        for(var k=0; k<chunksize; k++) {
-                            const midi_number = midi_notes[note_i];
-                            note_i++;
-                            if(midi_number == 0) continue;
+                0,
+                // G major
+                55,
+                59,
+                62,
+                67,
+                71,
+                0,
+                // A minor
+                57,
+                60,
+                64,
+                69,
+                72,
 
-                            const center = (width/columns/4) * (i/columns) + x + w/2;
-                            const top = (height/rows/4) * (j/rows) + y + h/2 + (k - chunksize/2) * h/chunksize;
+                0,
+                // F major
+                53,
+                57,
+                60,
+                65,
+                69,
 
-                            const note_offset = midi_number - midi_number_a1;
-                            initial_strings.push({
-                                string_center: {x: center, y: top},
-                                //string_width: Notes.relative_note(width_base_freq, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
-                                string_width: Notes.relative_note(width_base_freq*2, -note_offset),
-                                angle: 0, // i * Math.PI / 64
-                                midi_number,
-                            });
-                        }
+                0,
+
+            ]
+            const initial_strings = [];
+
+            const num_chords = midi_notes.filter(n => n == 0).length + 1;
+            const chunksize = 6;
+            const max_vertical = (height - 200) / 50;
+            const columns = 2
+            const rows = 2
+
+            let note_i = 0;
+            for (var i = 0; i < columns; i++) {
+                for (var j = 0; j < rows; j++) {
+                    const x = 100 + i * (width - 200) / columns;
+                    const y = 100 + j * (height - 200) / rows;
+                    const w = (width - 200) / columns;
+                    const h = (height - 200) / rows;
+
+                    console.log(x, y, w, h);
+
+                    for (var k = 0; k < chunksize; k++) {
+                        const midi_number = midi_notes[note_i];
+                        note_i++;
+                        if (midi_number == 0) continue;
+
+                        const center = (width / columns / 4) * (i / columns) + x + w / 2;
+                        const top = (height / rows / 4) * (j / rows) + y + h / 2 + (k - chunksize / 2) * h / chunksize;
+
+                        const note_offset = midi_number - midi_number_a1;
+                        initial_strings.push({
+                            string_center: { x: center, y: top },
+                            //string_width: Notes.relative_note(width_base_freq, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
+                            string_width: Notes.relative_note(width_base_freq * 2, -note_offset),
+                            freq: getFreqFromMidiNumber(midi_number),
+                            angle: 0, // i * Math.PI / 64
+                            midi_number,
+                        });
                     }
                 }
-                return initial_strings;
             }
 
+            return initial_strings;
+        }
 
-            const resetAndAddStrings = function(canvas_jq, audioShader, strings, options={skip_audio: false}) {
-                let width = canvas_jq.width();
-                let height = canvas_jq.height();
 
-                let duration = 5000;
+        const resetAndAddStrings = function (canvas_jq, audioShader, strings, options = { skip_audio: false }) {
+            let width = canvas_jq.width();
+            let height = canvas_jq.height();
 
-                const num_strings = Math.max(strings.length, 10);
-                const num_overtones = 12;
+            let duration = 5000;
 
-                if(!options.skip_audio) {
-                    if(audioShader) {
-                        audioShader.destroy();
-                        audioShader = null;
-                    }
-                    audioShader = new AudioShader(num_strings, num_overtones);
-                    audioShader.setup_audio();
+            const num_strings = strings.length;
+            const num_overtones = 12;
+
+            if (!options.skip_audio) {
+                if (audioShader) {
+                    audioShader.destroy();
+                    audioShader = null;
                 }
-
-                pluckableStrings.length = 0;
-
-                midi_string_map = {};
-
-                for(let i=0; i<strings.length; i++) {
-                    const string = strings[i];
-                    const overtones = [];
-                    let freq = string.freq ? string : parseInt(base_freq * width_base_freq/string.string_width);
-                    for(let j=0; j<num_overtones; j++) {
-                        overtones.push({freq: (j+1) * freq, amplitude: 1});
-                    }
-                    const midi_number = getMidiNumberFromFreq(freq);
-                    let {note, error} = Notes.freq_to_note(freq);
-
-                    var drawWave = new pluckableString({
-                        id: i,
-                        canvas: canvas_jq.get(0),
-                        freq,
-                        midi_number,
-                        note,
-                        note_micro_offset: error,
-                        overtones,
-                        wave_height: 50,
-                        string_width: string.string_width,
-                        string_center: string.string_center,
-                        angle: string.angle,
-                        duration,
-                        audio: audioShader,
-                        // string_slack: Math.max(5, Math.min(20, string.string_width/5)),
-                        string_slack: 20,
-                    })
-                    pluckableStrings.push(drawWave);
-                    midi_string_map[midi_number] = drawWave;
-                }
-
-                pluckableStrings.forEach(s => s.draw_still());
-
-                localStorage.setItem('strings', JSON.stringify(strings));
-
-                return { audioShader };
-
+                audioShader = new AudioShader(num_strings, num_overtones);
+                audioShader.setup_audio();
             }
-            window.snap_to_note = true;
-            $(document).ready(function() {
-                // on blur, go into idle
-                // on focus, resume
+
+            pluckableStrings.length = 0;
+
+            midi_string_map = {};
+
+            for (let i = 0; i < strings.length; i++) {
+                const string = strings[i];
+                const overtones = [];
+                if ((!string.string_width && !string.freq) || !string.string_center) {
+                    console.error('string_width or freq or string_center missing', i, string);
+                    continue;
+                }
+                let freq = string.freq ? parseInt(string.freq) : parseInt(base_freq * width_base_freq / string.string_width);
+                let string_width = freq_to_string_width(freq, width_base_freq);
+
+                for (let j = 0; j < num_overtones; j++) {
+                    overtones.push({ freq: (j + 1) * freq, amplitude: 1 });
+                }
+                const midi_number = getMidiNumberFromFreq(freq);
+                let { note, error } = Notes.freq_to_note(freq);
+
+                let string_center = string.string_center;
+                if(string.screen) {
+                    string_center.x = width * string.string_center.x / string.screen.width;
+                    string_center.y = height * string.string_center.y / string.screen.height;
+                }
+
+                var drawWave = new pluckableString({
+                    id: i,
+                    canvas: canvas_jq.get(0),
+                    freq,
+                    midi_number,
+                    note,
+                    note_micro_offset: error,
+                    overtones,
+                    wave_height: 50,
+                    string_width,
+                    string_center,
+                    angle: string.angle,
+                    duration,
+                    audio: audioShader,
+                    string_slack: Math.max(5, Math.min(20, string.string_width / 5)),
+                })
+                pluckableStrings.push(drawWave);
+                midi_string_map[midi_number] = drawWave;
+                string.screen = { width, height };
+                if(!string.freq) {
+                    string.freq = freq;
+                }
+            }
+
+            pluckableStrings.forEach(s => s.draw_still());
+
+            localStorage.setItem('strings', JSON.stringify(strings));
+
+            return { audioShader };
+
+        }
+        window.snap_to_note = true;
+        $(document).ready(function () {
+            // on blur, go into idle
+            // on focus, resume
+            window.idle = false;
+            $(window).focus(function () {
                 window.idle = false;
-                $(window).focus(function(){
-                    window.idle = false;
-                });
-                // create a drawing area inside an element
+            });
+            // create a drawing area inside an element
 
-                var canvas_jq = new Canvas($('#draw').empty());
+            var canvas_jq = new Canvas($('#draw').empty());
 
-                $(window).resize(function() {
-                    setCanvasSize(canvas_jq, window.innerWidth, window.innerHeight);
-                });
+            $(window).resize(function () {
+                setCanvasSize(canvas_jq, window.innerWidth, window.innerHeight);
+            });
 
-                let canvas_offset = canvas_jq.offset();
-                let width = canvas_jq.width();
-                let height = canvas_jq.height();
+            let canvas_offset = canvas_jq.offset();
+            let width = canvas_jq.width();
+            let height = canvas_jq.height();
 
-                width_base_freq = Math.min(width - 100, 700)
+            width_base_freq = Math.min(width * 0.95, 1000);
 
-                const initial_strings = getInitialStrings(canvas_jq);
+            const initial_strings = getInitialStrings(canvas_jq);
 
-                var canvas = canvas_jq.get(0);
-                var context = canvas.getContext("2d");
+            var canvas = canvas_jq.get(0);
+            var context = canvas.getContext("2d");
 
-                const fill_styles_per_mode = {
-                    [CanvasModes.pluck]: "rgba(0, 0, 0, 1.0)",
-                    [CanvasModes.draw]: "rgba(0, 50, 0, 0.5)",
-                    [CanvasModes.erase]: "rgba(50, 0, 0, 0.5)",
-                }
-                context.fillStyle = "rgba(0, 0, 0, 0.5)";
-                context.lineWidth = 2;
-                context.strokeStyle = "#fff";
+            const fill_styles_per_mode = {
+                [CanvasModes.pluck]: "rgba(0, 0, 0, 1.0)",
+                [CanvasModes.draw]: "rgba(0, 50, 0, 0.5)",
+                [CanvasModes.erase]: "rgba(50, 0, 0, 0.5)",
+            }
+            context.fillStyle = "rgba(0, 0, 0, 0.5)";
+            context.lineWidth = 2;
+            context.strokeStyle = "#fff";
 
-                let { audioShader } = resetAndAddStrings(canvas_jq, null, initial_strings);
+            let { audioShader } = resetAndAddStrings(canvas_jq, null, initial_strings);
 
 
 
-                function start_drawing() {
-                    window.canvas_mode = CanvasModes.draw;
-                }
-                function stop_drawing() {
-                    window.canvas_mode = CanvasModes.pluck;
-                    finish_drawing_string();
-                }
+            function start_drawing() {
+                window.canvas_mode = CanvasModes.draw;
+            }
+            function stop_drawing() {
+                window.canvas_mode = CanvasModes.pluck;
+                finish_drawing_string({restart_audio: true});
+            }
 
-                function finish_drawing_string() {
-                    let newStrings = pluckableStrings.map(s => { return {string_center: s.string_center, string_width: s.string_width, angle: s.angle} });
+            function finish_drawing_string({restart_audio = false} = {}) {
+                let newStrings = pluckableStrings.map(s => { return { string_center: s.string_center, string_width: s.string_width, angle: s.angle } });
 
-                    if(window.canvas_mode == CanvasModes.draw && draw_start) {
-                        let offsetStart = draw_start;
-                        let offsetEnd = draw_end;
-                        let string_center = {x: offsetStart.x + (offsetEnd.x - offsetStart.x)/2, y: offsetStart.y + (offsetEnd.y - offsetStart.y)/2};
+                if (window.canvas_mode == CanvasModes.draw && draw_start) {
+                    let offsetStart = draw_start;
+                    let offsetEnd = draw_end;
+                    let string_center = { x: offsetStart.x + (offsetEnd.x - offsetStart.x) / 2, y: offsetStart.y + (offsetEnd.y - offsetStart.y) / 2 };
 
-                        let string_width = Math.sqrt(Math.pow(offsetEnd.x - offsetStart.x, 2) + Math.pow(offsetEnd.y - offsetStart.y, 2))
-                        if(window.snap_to_note) {
-                            let freq = string_width_to_freq(string_width, width_base_freq);
-                            let snap_freq = Notes.note_to_freq(Notes.freq_to_note(freq).note);
-                            console.log('note', Notes.freq_to_note(freq).note, 'snap_freq', snap_freq);
-                            string_width = freq_to_string_width(snap_freq, width_base_freq);
-                        }
+                    let string_width = Math.sqrt(Math.pow(offsetEnd.x - offsetStart.x, 2) + Math.pow(offsetEnd.y - offsetStart.y, 2))
 
-                        let string = {
-                            string_center,
-                            string_width,
-                            angle: Math.atan2(offsetEnd.y - offsetStart.y, offsetEnd.x - offsetStart.x),
-                        }
+                    let freq = string_width_to_freq(string_width, width_base_freq);
 
-                        newStrings.push(string);
+                    if (window.snap_to_note) {
+                        let snap_freq = Notes.note_to_freq(Notes.freq_to_note(freq).note);
+                        string_width = freq_to_string_width(snap_freq, width_base_freq);
+                        freq = snap_freq;
                     }
-                    
-                    let { audioShader: newAudioShader } = resetAndAddStrings(canvas_jq, audioShader, newStrings, {skip_audio: window.canvas_mode != CanvasModes.pluck});
-                    audioShader = newAudioShader;
+
+                    let string = {
+                        string_center,
+                        string_width,
+                        freq,
+                        angle: Math.atan2(offsetEnd.y - offsetStart.y, offsetEnd.x - offsetStart.x),
+                        screen: { width, height },
+                    }
+
+                    newStrings.push(string);
                 }
 
-                function finish_erasing_string() {
-                    const erase_distance = 10;
+                let { audioShader: newAudioShader } = resetAndAddStrings(canvas_jq, audioShader, newStrings, { skip_audio: !restart_audio });
 
-                    if(window.canvas_mode == CanvasModes.erase && draw_start) {
-                        let offsetStart = draw_start;
-                        let offsetEnd = draw_end;
+                audioShader = newAudioShader;
+            }
 
-                        const distance = Math.sqrt(Math.pow(offsetEnd.x - offsetStart.x, 2) + Math.pow(offsetEnd.y - offsetStart.y, 2));
-                        const num_hops = Math.ceil(distance / erase_distance);
+            function finish_erasing_string() {
+                const erase_distance = 10;
 
-                        const string_ids_to_erase = [];
-                        for(let i=0; i<num_hops; i++) {
-                            const offsetX = offsetStart.x + (offsetEnd.x - offsetStart.x) * i / num_hops;
-                            const offsetY = offsetStart.y + (offsetEnd.y - offsetStart.y) * i / num_hops;
+                if (window.canvas_mode == CanvasModes.erase && draw_start) {
+                    let offsetStart = draw_start;
+                    let offsetEnd = draw_end;
 
-                            for(let j=0; j<pluckableStrings.length; j++) {
-                                const string = pluckableStrings[j];
+                    const distance = Math.sqrt(Math.pow(offsetEnd.x - offsetStart.x, 2) + Math.pow(offsetEnd.y - offsetStart.y, 2));
+                    const num_hops = Math.ceil(distance / erase_distance);
+
+                    const string_ids_to_erase = [];
+                    for (let i = 0; i < num_hops; i++) {
+                        const offsetX = offsetStart.x + (offsetEnd.x - offsetStart.x) * i / num_hops;
+                        const offsetY = offsetStart.y + (offsetEnd.y - offsetStart.y) * i / num_hops;
+
+                        for (let j = 0; j < pluckableStrings.length; j++) {
+                            const string = pluckableStrings[j];
 
 
-                                const angledOffset = rotate_coordinates_for_string(string, offsetX, offsetY);
-                                const angledOffsetX = angledOffset.x;
-                                const angledOffsetY = angledOffset.y;
+                            const angledOffset = rotate_coordinates_for_string(string, offsetX, offsetY);
+                            const angledOffsetX = angledOffset.x;
+                            const angledOffsetY = angledOffset.y;
 
-                                if(angledOffset.x > string.string_position.x && angledOffset.x < string.string_position.x + string.string_width && angledOffset.y > string.string_position.y - erase_distance && angledOffset.y < string.string_position.y + erase_distance) {
-                                    string_ids_to_erase.push(j);
-                                }
+                            if (angledOffset.x > string.string_position.x && angledOffset.x < string.string_position.x + string.string_width && angledOffset.y > string.string_position.y - erase_distance && angledOffset.y < string.string_position.y + erase_distance) {
+                                string_ids_to_erase.push(j);
                             }
                         }
-                        let newStrings = pluckableStrings.filter((s, i) => !string_ids_to_erase.includes(i)).map(s => { return {string_center: s.string_center, string_width: s.string_width, angle: s.angle} });
-
-                        if(newStrings.length < pluckableStrings.length) {
-                            let { audioShader: newAudioShader } = resetAndAddStrings(canvas_jq, audioShader, newStrings, {skip_audio: window.canvas_mode != CanvasModes.pluck});
-                            audioShader = newAudioShader;
-                        }
                     }
-                    
+                    let newStrings = pluckableStrings.filter((s, i) => !string_ids_to_erase.includes(i)).map(s => { return { string_center: s.string_center, string_width: s.string_width, angle: s.angle } });
+
+                    if (newStrings.length < pluckableStrings.length) {
+                        let { audioShader: newAudioShader } = resetAndAddStrings(canvas_jq, audioShader, newStrings, { skip_audio: window.canvas_mode != CanvasModes.pluck });
+                        audioShader = newAudioShader;
+                    }
                 }
 
-                canvas_jq.on('mousedown touchstart', (e) => {
-                    e.preventDefault();
+            }
 
-                    if(window.canvas_mode == CanvasModes.draw || window.canvas_mode == CanvasModes.erase) {
-                        const {offsetX, offsetY} = click_or_touch_coordinates(e);
-                        draw_start = {x: offsetX, y: offsetY};
-                        draw_end = {x: offsetX, y: offsetY};
+            canvas_jq.on('mousedown touchstart', (e) => {
+                e.preventDefault();
+
+                if (window.canvas_mode == CanvasModes.draw || window.canvas_mode == CanvasModes.erase) {
+                    const { offsetX, offsetY } = click_or_touch_coordinates(e);
+                    draw_start = { x: offsetX, y: offsetY };
+                    draw_end = { x: offsetX, y: offsetY };
+                }
+            })
+            canvas_jq.on('mouseup touchend', (e) => {
+                e.preventDefault();
+                if (draw_start) {
+                    if (window.canvas_mode == CanvasModes.draw) {
+                        finish_drawing_string();
+                    } else if (window.canvas_mode == CanvasModes.erase) {
+                        finish_erasing_string();
                     }
+                    draw_start = null
+                    draw_end = null
+                }
+            })
+            $(document).on('mousemove touchmove', (e) => {
+                if (draw_start) {
+                    if ((window.canvas_mode == CanvasModes.draw || window.canvas_mode == CanvasModes.erase)) {
+                        const offset = click_or_touch_coordinates(e);
+                        draw_end.y = offset.offsetY;
+                        draw_end.x = offset.offsetX;
+                    }
+                }
+            })
+
+
+
+            let start_time;
+            let note_index = 0;
+            let pluck_index = 0;
+            let midi_track;
+            let notes;
+            window.midi_paused = true
+
+            let speed = 1;
+            let pluck_duration = 150;
+
+            let notes_map = {}
+            let notes_map_cursors = {}
+
+            async function set_remote_midi_track(url) {
+                let midi_file = await fetch(url).then(r => r.arrayBuffer());
+                // sate to blob
+                let midi_blob = new Blob([midi_file], { type: 'audio/midi' });
+                // create a URL for the blob
+                let midi_url = URL.createObjectURL(midi_blob);
+                // use tonejs to load the midi file
+                let midi_json = await Midi.fromUrl(midi_url);
+                console.log(midi_json);
+                set_midi_track(midi_json);
+            }
+
+            function set_midi_track(new_midi_track) {
+                midi_track = new_midi_track;
+                notes = midi_track.tracks[0].notes;
+                notes_map = {}
+                notes_map_cursors = {}
+                notes.forEach(note => {
+                    if (!notes_map[note.midi]) {
+                        notes_map[note.midi] = [];
+                        notes_map_cursors[note.midi] = 0;
+                    }
+                    notes_map[note.midi].push(note);
                 })
-                canvas_jq.on('mouseup touchend', (e) => {
-                    e.preventDefault();
-                    if(draw_start) {
-                        if(window.canvas_mode == CanvasModes.draw) {
-                            finish_drawing_string();
-                        } else if(window.canvas_mode == CanvasModes.erase) {
-                            finish_erasing_string();
-                        }
-                        draw_start = null
-                        draw_end = null
-                    }
-                })
-                $(document).on('mousemove touchmove', (e) => {
-                    if(draw_start) {
-                        if((window.canvas_mode == CanvasModes.draw || window.canvas_mode == CanvasModes.erase)) {
-                            const offset = click_or_touch_coordinates(e);
-                            draw_end.y = offset.offsetY;
-                            draw_end.x = offset.offsetX;
-                        }
-                    }
-                })
+                window.midi_paused = false;
+            };
 
+            let last_frame_time;
 
-                
-                let start_time;
-                let note_index = 0;
-                let pluck_index = 0;
-                let midi_track;
-                let notes;
-                window.midi_paused = true
-                
-                let speed = 1;
-                let pluck_duration = 150;
-                
-                let notes_map = {}
-                let notes_map_cursors = {}
-
-                async function set_remote_midi_track(url) {
-                    let midi_file = await fetch(url).then(r => r.arrayBuffer());
-                    // sate to blob
-                    let midi_blob = new Blob([midi_file], {type: 'audio/midi'});
-                    // create a URL for the blob
-                    let midi_url = URL.createObjectURL(midi_blob);
-                    // use tonejs to load the midi file
-                    let midi_json = await Midi.fromUrl(midi_url);
-                    console.log(midi_json);
-                    set_midi_track(midi_json);
+            let frame = () => {
+                requestAnimationFrame(frame)
+                if (window.idle) {
+                    return;
                 }
-                
-                function set_midi_track(new_midi_track) {
-                    midi_track = new_midi_track;    
-                    notes = midi_track.tracks[0].notes;
-                    notes_map = {}
-                    notes_map_cursors = {}
-                    notes.forEach(note => {
-                        if(!notes_map[note.midi]) {
-                            notes_map[note.midi] = [];
-                            notes_map_cursors[note.midi] = 0;
-                        }
-                        notes_map[note.midi].push(note);
-                    })
-                    window.midi_paused = false;
-                };
-
-                function string_width_to_freq(string_width, width_base_freq) {
-                    if(string_width == 0) {
-                        return 0;
-                    }
-                    return base_freq * width_base_freq/string_width;
-                }
-                function freq_to_string_width(freq, width_base_freq) {
-                    if(freq == 0) {
-                        return 0;
-                    }
-                    return base_freq * width_base_freq/freq;
-                }
-
-                let last_frame_time;
-
-                let frame = () => {
-                    requestAnimationFrame(frame)
-                    if(window.idle) {
-                        return;
-                    }
-                    if(last_frame_time && Date.now() - last_frame_time > 1000) {
+                if (last_frame_time && Date.now() - last_frame_time > 1000) {
+                    if(window.midi_paused == false) {
                         window.midi_paused = true
                         console.log('pausing due to inactivity?')
                     }
-                    last_frame_time = Date.now();
+                }
+                last_frame_time = Date.now();
 
-                    let one_sec_ms = 1000 * (1/speed);
+                let one_sec_ms = 1000 * (1 / speed);
 
-                    context.fillStyle = fill_styles_per_mode[window.canvas_mode];
+                context.fillStyle = fill_styles_per_mode[window.canvas_mode];
 
-                    context.fillRect(0, 0, context.width, context.height);
-                    pluckableStrings.forEach(s => {
-                        if(s.playing) s.draw()
-                        else if(s.plucking) s.draw_pluck();
-                        else s.draw_still();
-                    });
+                context.fillRect(0, 0, context.width, context.height);
+                pluckableStrings.forEach(s => {
+                    if (s.playing) s.draw()
+                    else if (s.plucking) s.draw_pluck();
+                    else s.draw_still();
+                });
 
-                    if(!start_time) {
-                        start_time = Date.now();
-                    }
-                    let time_diff = Date.now()-start_time;
+                if (!start_time) {
+                    start_time = Date.now();
+                }
+                let time_diff = Date.now() - start_time;
 
-                    // if(!document.hasFocus()) {
-                    //     window.midi_paused = true;
-                    // }
-                    if(!window.midi_paused) {
-                        Object.keys(notes_map_cursors).forEach(midi_num => {
-                            let cursor = notes_map_cursors[midi_num];
-                            let note = notes_map[midi_num][cursor];
-                            if(note) {
-                                let plucking_string = midi_string_map[note.midi]
-                                if(plucking_string) {
-                                    const prev_note = notes_map[midi_num][cursor-1];
-                                    const _pluck_duration = prev_note ?  Math.min(pluck_duration, (note.time - prev_note.time) * one_sec_ms / 3) : pluck_duration;
-                                    // const _pluck_duration = Math.min(pluck_duration, 
-                                    let pluck_time = Math.max((plucking_string.prev_note_time || 0)+50, note.time * one_sec_ms - _pluck_duration);
-                                    if(time_diff >= pluck_time) {
-                                        let offsetX = plucking_string.pluck_offset_x ? plucking_string.pluck_offset_x : plucking_string.string_center.x + (Math.random() * 2 - 1)*plucking_string.string_width/2;
-                                        let progress = (time_diff - pluck_time) / _pluck_duration;
-                                        let velocity = note.velocity ? note.velocity : 1;
-                                        let offsetY = plucking_string.string_center.y + progress * velocity * plucking_string.string_slack;
-                                        plucking_string.set_pluck_offsets(offsetX, offsetY);
-                                    }
+                // if(!document.hasFocus()) {
+                //     window.midi_paused = true;
+                // }
+                if (!window.midi_paused) {
+                    Object.keys(notes_map_cursors).forEach(midi_num => {
+                        let cursor = notes_map_cursors[midi_num];
+                        let note = notes_map[midi_num][cursor];
+                        if (note) {
+                            let plucking_string = midi_string_map[note.midi]
+                            if (plucking_string) {
+                                const prev_note = notes_map[midi_num][cursor - 1];
+                                const _pluck_duration = prev_note ? Math.min(pluck_duration, (note.time - prev_note.time) * one_sec_ms / 3) : pluck_duration;
+                                // const _pluck_duration = Math.min(pluck_duration, 
+                                let pluck_time = Math.max((plucking_string.prev_note_time || 0) + 50, note.time * one_sec_ms - _pluck_duration);
+                                if (time_diff >= pluck_time) {
+                                    let offsetX = plucking_string.pluck_offset_x ? plucking_string.pluck_offset_x : plucking_string.string_center.x + (Math.random() * 2 - 1) * plucking_string.string_width / 2;
+                                    let progress = (time_diff - pluck_time) / _pluck_duration;
+                                    let velocity = note.velocity ? note.velocity : 1;
+                                    let offsetY = plucking_string.string_center.y + progress * velocity * plucking_string.string_slack;
+                                    plucking_string.set_pluck_offsets(offsetX, offsetY);
                                 }
                             }
-                        })
-                        
-                        let note = notes[note_index];
-                        let note_time = note.time * one_sec_ms;
-                        let string = midi_string_map[note.midi];
+                        }
+                    })
 
-                        if(time_diff >= note_time) {
-                            if(string) {
-                                string.pluck();
-                                string.prev_note_time = note_time;
-                            }
-                            note_index++;
-                            notes_map_cursors[note.midi]++
+                    let note = notes[note_index];
+                    let note_time = note.time * one_sec_ms;
+                    let string = midi_string_map[note.midi];
 
-                            if(note_index >= notes.length) {
-                                window.midi_paused = true;
+                    if (time_diff >= note_time) {
+                        if (string) {
+                            string.pluck();
+                            string.prev_note_time = note_time;
+                        }
+                        note_index++;
+                        notes_map_cursors[note.midi]++
+
+                        if (note_index >= notes.length) {
+                            window.midi_paused = true;
+                        }
+                    }
+                }
+
+                if ((window.canvas_mode == CanvasModes.draw || window.canvas_mode == CanvasModes.erase) && draw_start && draw_end) {
+                    let string_width = Math.sqrt(Math.pow(draw_end.x - draw_start.x, 2) + Math.pow(draw_end.y - draw_start.y, 2))
+                    if (string_width > 0) {
+                        if (window.canvas_mode == CanvasModes.draw) {
+                            context.strokeStyle = "#ffa";
+                        } else if (window.canvas_mode == CanvasModes.erase) {
+                            context.strokeStyle = "#f00";
+                        }
+                        context.beginPath();
+                        context.moveTo(draw_start.x, draw_start.y);
+                        context.lineTo(draw_end.x, draw_end.y);
+                        context.stroke();
+
+                        const label_finger_offset = {
+                            x: -10,
+                            y: -50,
+                        }
+
+                        if (draw_end.y < 100) {
+                            label_finger_offset.y = 50;
+                        }
+
+                        if (window.canvas_mode == CanvasModes.draw) {
+                            let freq = string_width_to_freq(string_width, width_base_freq);
+                            let { note, error } = Notes.freq_to_note(freq);
+                            context.save();
+                            context.fillStyle = "#fff";
+                            context.font = "20px Arial";
+                            context.fillText(note, draw_end.x + label_finger_offset.x, draw_end.y + label_finger_offset.y);
+
+                            if (!window.snap_to_note) {
+                                context.font = "10px Arial"
+                                context.fillText((error < 0 ? '-' : error > 0 ? '+' : '') + error.toFixed(2) + 'hz', draw_end.x + label_finger_offset.x, draw_end.y + label_finger_offset.y + 10);
                             }
+                            context.restore();
+                        }
+                        if (window.canvas_mode == CanvasModes.erase) {
+                            context.save();
+                            context.fillStyle = "#f00";
+                            context.font = "20px Arial";
+                            context.fillText("Erase", draw_end.x - 30, draw_end.y + label_finger_offset.y);
+                            context.restore();
                         }
                     }
 
-                    if((window.canvas_mode == CanvasModes.draw || window.canvas_mode == CanvasModes.erase) && draw_start && draw_end) {
-                        let string_width = Math.sqrt(Math.pow(draw_end.x - draw_start.x, 2) + Math.pow(draw_end.y - draw_start.y, 2))
-                        if(string_width > 0) {
-                            if(window.canvas_mode == CanvasModes.draw) {
-                                context.strokeStyle = "#ffa";
-                            } else if(window.canvas_mode == CanvasModes.erase) {
-                                context.strokeStyle = "#f00";
-                            }
-                            context.beginPath();
-                            context.moveTo(draw_start.x, draw_start.y);
-                            context.lineTo(draw_end.x, draw_end.y);
-                            context.stroke();
 
-                            const label_finger_offset = {
-                                x: -10,
-                                y: -50,
-                            }
-
-                            if(draw_end.y < 100) {
-                                label_finger_offset.y = 50;
-                            }
-    
-                            if(window.canvas_mode == CanvasModes.draw) {
-                                let freq = string_width_to_freq(string_width, width_base_freq);
-                                let {note, error} = Notes.freq_to_note(freq);
-                                context.save();
-                                context.fillStyle = "#fff";
-                                context.font = "20px Arial";
-                                context.fillText(note, draw_end.x + label_finger_offset.x, draw_end.y + label_finger_offset.y);
-        
-                                if(!window.snap_to_note) {
-                                    context.font = "10px Arial"
-                                    context.fillText((error < 0 ? '-' : error > 0 ? '+' : '')+error.toFixed(2) + 'hz', draw_end.x + label_finger_offset.x, draw_end.y + label_finger_offset.y + 10);
-                                }
-                                context.restore();
-                            }
-                            if(window.canvas_mode == CanvasModes.erase) {
-                                context.save();
-                                context.fillStyle = "#f00";
-                                context.font = "20px Arial";
-                                context.fillText("Erase", draw_end.x - 30, draw_end.y + label_finger_offset.y);
-                                context.restore();
-                            }
-                        }
-
-
-                    }
+                }
 
 
 
-                    for(let coordinate of Object.values(touchInstances)) {
-                        // draw circle where touch is
+                for (let coordinate of Object.values(touchInstances)) {
+                    // draw circle where touch is if in pluck mode
+                    if (window.canvas_mode == CanvasModes.pluck) {
                         context.save();
                         context.beginPath();
                         context.arc(coordinate.x, coordinate.y, 5, 0, 2 * Math.PI, false);
@@ -679,221 +874,222 @@
                         context.restore();
                     }
                 }
-
-                
-                let touchInstances = {};
-
-                setTimeout(() => {
-                    window.started = true
-                }, 100)
-                frame();
+            }
 
 
-                function click_or_touch_coordinates(e) {
-                    let x, y;
-                    if(e.type == 'touchstart' || e.type == 'touchmove' || e.type == 'touchend' || e.type == 'touchcancel'){
-                        var touch = e.originalEvent.touches[0] || e.originalEvent.changedTouches[0];
-                        x = touch.pageX;
-                        y = touch.pageY;
-                    } else if (e.type == 'mousedown' || e.type == 'mouseup' || e.type == 'mousemove' || e.type == 'mouseover'|| e.type=='mouseout' || e.type=='mouseenter' || e.type=='mouseleave') {
-                        x = e.clientX;
-                        y = e.clientY;
-                    }
+            let touchInstances = {};
 
-                    let offsetX = Math.min(Math.max(x - canvas_jq.offset().left, 10), canvas_jq.width()-10)
-                    let offsetY = Math.min(Math.max(y - canvas_jq.offset().top, 1), canvas_jq.height())
-                    return {offsetX, offsetY};
+            setTimeout(() => {
+                window.started = true
+            }, 100)
+            frame();
+
+
+            function click_or_touch_coordinates(e) {
+                let x, y;
+                if (e.type == 'touchstart' || e.type == 'touchmove' || e.type == 'touchend' || e.type == 'touchcancel') {
+                    var touch = e.originalEvent.touches[0] || e.originalEvent.changedTouches[0];
+                    x = touch.pageX;
+                    y = touch.pageY;
+                } else if (e.type == 'mousedown' || e.type == 'mouseup' || e.type == 'mousemove' || e.type == 'mouseover' || e.type == 'mouseout' || e.type == 'mouseenter' || e.type == 'mouseleave') {
+                    x = e.clientX;
+                    y = e.clientY;
                 }
 
-                let always_pluck = false;
-                let prev_cursor;
+                let offsetX = Math.min(Math.max(x - canvas_jq.offset().left, 10), canvas_jq.width() - 10)
+                let offsetY = Math.min(Math.max(y - canvas_jq.offset().top, 1), canvas_jq.height())
+                return { offsetX, offsetY };
+            }
 
-                $(window).blur(function(){
-                    //strings.forEach(s => s.stop_sound());
-                    //init()
+            let always_pluck = false;
+            let prev_cursor;
+
+            $(window).blur(function () {
+                //strings.forEach(s => s.stop_sound());
+                //init()
+                touchInstances = {};
+            });
+            $(document).on('mouseout', function (event) {
+                if (!event.relatedTarget) {
                     touchInstances = {};
-                });
-                $(document).on('mouseout', function(event) {
-                    if (!event.relatedTarget) {
-                        touchInstances = {};
-                    }
-                });
-
-
-                let auto_pluck_distance = 5;
-
-                let rotate_coordinates_for_string = function(string, offsetX, offsetY) {
-                    return {
-                        x: string.string_center.x + (offsetX - string.string_center.x) * Math.cos(-string.angle) - (offsetY - string.string_center.y) * Math.sin(-string.angle),
-                        y: string.string_center.y + (offsetX - string.string_center.x) * Math.sin(-string.angle) + (offsetY - string.string_center.y) * Math.cos(-string.angle),
-                    }
                 }
-                
-                let cursor_move_handler = function(touch) {
-                    const { id, x, y, prevX, prevY, startX, startY } = touch;
-                    const offsetX = x;
-                    const offsetY = y;
+            });
 
 
-                    pluckableStrings.forEach(string => {
-                        const angledOffset = rotate_coordinates_for_string(string, offsetX, offsetY);
-                        const angledOffsetX = angledOffset.x;
-                        const angledOffsetY = angledOffset.y;
-                        if(string.hand_plucking && string.pluck_source.id === id) {
-                            string.set_pluck_offsets(angledOffsetX, angledOffsetY)
-                        } else {
-                            if(always_pluck) {
-                                if(angledOffset.x > string.string_position.x && angledOffset.x < string.string_position.x + string.string_width && angledOffset.y > string.string_position.y - auto_pluck_distance && angledOffset.y < string.string_position.y + auto_pluck_distance) {
+            let auto_pluck_distance = 5;
 
-                                    if(string.hand_plucking) {
-                                        string.set_pluck_offsets(angledOffsetX, angledOffsetY)
-                                    } else {
-                                        string.set_pluck_offsets(angledOffsetX, angledOffsetY);
-                                        string.hand_plucking = true;
-                                        string.pluck_source = touch;
-                                        string.stop_sound()
-                                    }
-                                
+            let rotate_coordinates_for_string = function (string, offsetX, offsetY) {
+                return {
+                    x: string.string_center.x + (offsetX - string.string_center.x) * Math.cos(-string.angle) - (offsetY - string.string_center.y) * Math.sin(-string.angle),
+                    y: string.string_center.y + (offsetX - string.string_center.x) * Math.sin(-string.angle) + (offsetY - string.string_center.y) * Math.cos(-string.angle),
+                }
+            }
+
+            let cursor_move_handler = function (touch) {
+                const { id, x, y, prevX, prevY, startX, startY } = touch;
+                const offsetX = x;
+                const offsetY = y;
+
+
+                pluckableStrings.forEach(string => {
+                    const angledOffset = rotate_coordinates_for_string(string, offsetX, offsetY);
+                    const angledOffsetX = angledOffset.x;
+                    const angledOffsetY = angledOffset.y;
+                    if (string.hand_plucking && string.pluck_source.id === id) {
+                        string.set_pluck_offsets(angledOffsetX, angledOffsetY)
+                    } else {
+                        if (always_pluck) {
+                            if (angledOffset.x > string.string_position.x && angledOffset.x < string.string_position.x + string.string_width && angledOffset.y > string.string_position.y - auto_pluck_distance && angledOffset.y < string.string_position.y + auto_pluck_distance) {
+
+                                if (string.hand_plucking) {
+                                    string.set_pluck_offsets(angledOffsetX, angledOffsetY)
+                                } else {
+                                    string.set_pluck_offsets(angledOffsetX, angledOffsetY);
+                                    string.hand_plucking = true;
+                                    string.pluck_source = touch;
+                                    string.stop_sound()
                                 }
+
                             }
                         }
-                    });
-                }
-                
-                let idle_timeout;
-
-                window.idle = false;
-                function handleClickOrTouchEvents(event) {
-
-                    if(idle_timeout) {
-                        clearTimeout(idle_timeout);
-                        window.idle = false;
                     }
-                    idle_timeout = setTimeout(() => {
-                        if(window.midi_paused) {
-                            window.idle = true;
-                        }
-                    }, 15000);
+                });
+            }
+
+            let idle_timeout;
+
+            window.idle = false;
+            function handleClickOrTouchEvents(event) {
+
+                if (idle_timeout) {
+                    clearTimeout(idle_timeout);
+                    window.idle = false;
+                }
+                idle_timeout = setTimeout(() => {
+                    if (window.midi_paused) {
+                        window.idle = true;
+                    }
+                }, 15000);
 
 
-                    if(window.canvas_mode !== CanvasModes.pluck) {
+                if (window.canvas_mode !== CanvasModes.pluck) {
+                    return;
+                }
+                if (!window.started) {
+                    return
+                }
+                event.preventDefault();
+                event.stopPropagation();
+                let eventType;
+                let coordinates;
+
+                if ((event.type === 'touchstart' || event.type === 'mousedown') && audioShader.audioCtx.state === 'suspended') {
+                    audioShader.resume();
+                }
+
+                switch (event.type) {
+                    case 'touchstart':
+                    case 'touchmove':
+                    case 'touchend':
+                        eventType = 'touch';
+                        coordinates = Array.from(event.changedTouches).map(touch => {
+                            const x = touch.clientX;
+                            const y = touch.clientY;
+                            let offsetX = Math.min(Math.max(x - canvas_offset.left, 10), width - 10)
+                            let offsetY = Math.min(Math.max(y - canvas_offset.top, 1), height)
+                            return { id: touch.identifier, x, y }
+                        });
+                        break;
+                    case 'mousedown':
+                    case 'mousemove':
+                    case 'mouseup':
+                        eventType = 'mouse';
+                        coordinates = [{ id: 'mouse', x: event.clientX, y: event.clientY }];
+                        break;
+                    default:
                         return;
-                    }
-                    if(!window.started) {
-                        return
-                    }
-                    event.preventDefault();
-                    event.stopPropagation();
-                    let eventType;
-                    let coordinates;
-
-                    if((event.type === 'touchstart' || event.type === 'mousedown') && audioShader.audioCtx.state === 'suspended') {
-                        audioShader.resume();
-                    }
-
-                    switch (event.type) {
-                        case 'touchstart':
-                        case 'touchmove':
-                        case 'touchend':
-                            eventType = 'touch';
-                            coordinates = Array.from(event.changedTouches).map(touch => {
-                                const x = touch.clientX;
-                                const y = touch.clientY;
-                                let offsetX = Math.min(Math.max(x - canvas_offset.left, 10), width-10)
-                                let offsetY = Math.min(Math.max(y - canvas_offset.top, 1), height)
-                                return { id: touch.identifier, x, y }
-                            });
-                            break;
-                        case 'mousedown':
-                        case 'mousemove':
-                        case 'mouseup':
-                            eventType = 'mouse';
-                            coordinates = [{ id: 'mouse', x: event.clientX, y: event.clientY }];
-                            break;
-                        default:
-                            return;
-                    }
-
-                    for (const coordinate of coordinates) {
-                        const touch = touchInstances[coordinate.id];
-
-                        if (event.type === 'touchend' || event.type === 'mouseup') {
-                            if (touch) {
-                                touch.end = true;
-                            }
-                        } else {
-                            if (!touch) {
-                                touchInstances[coordinate.id] = {
-                                    id: coordinate.id,
-                                    prevX: coordinate.x,
-                                    prevY: coordinate.y,
-                                    x: coordinate.x,
-                                    y: coordinate.y,
-                                    startX: coordinate.x,
-                                    startY: coordinate.y,
-                                };
-                            } else {
-                                touch.prevX = touch.x;
-                                touch.prevY = touch.y;
-                                touch.x = coordinate.x;
-                                touch.y = coordinate.y;
-                            }
-                        }
-                    }
-
-                    if(event.type === 'touchstart' || event.type === 'mousedown') {
-                        always_pluck = true;
-                        Object.values(touchInstances).filter(ti => ti.x & ti.y).forEach(touch => {
-                            const { x, y } = touch;
-                            cursor_move_handler(touch);
-                        })
-                    }
-                    if(event.type === 'touchend' || event.type === 'mouseup') {
-                        Object.values(touchInstances).filter(ti => ti.end).forEach(touch => {
-                            pluckableStrings.forEach(string => {
-                                if(string.hand_plucking && string.pluck_source && string.pluck_source.id === touch.id) {
-                                    
-                                    const angledOffset = rotate_coordinates_for_string(string, touch.prevX, touch.prevY);
-                                    string.pluck(angledOffset.x, angledOffset.y);
-                                }
-                            });
-                            delete touchInstances[touch.id];
-                        })
-
-                        if(Object.values(touchInstances).length === 0) {
-                            always_pluck = false;
-                        }
-                    }
-                    if(event.type === 'touchmove' || event.type === 'mousemove') {
-
-                        Object.values(touchInstances).filter(ti => ti.x && ti.y).forEach(touch => {
-                            const { x, y } = touch;
-                            const prev_cursor = touch.prevX && touch.prevY ? { x: touch.prevX, y: touch.prevY } : undefined;
-                            if(prev_cursor) {
-                                let distance = Math.sqrt(Math.pow(x - prev_cursor.x, 2) + Math.pow(y - prev_cursor.y, 2));
-                                if(distance > 5) {
-                                    let slices = Math.floor(distance / 5);
-                                    for(let i=1; i<=slices; i++) {
-                                        const interpolated_touch = {
-                                            ...touch,
-                                            x: prev_cursor.x + i*(x - prev_cursor.x)/slices,
-                                            y: prev_cursor.y + i*(y - prev_cursor.y)/slices
-                                        };
-                                        cursor_move_handler(interpolated_touch);
-                                    }
-                                }
-                            }
-                            cursor_move_handler(touch);
-                        })
-                    }
-
                 }
 
-                ['touchstart', 'touchmove', 'touchend', 'mousedown', 'mousemove', 'mouseup'].forEach(eventName => {
-                    canvas.addEventListener(eventName, handleClickOrTouchEvents, { passive: false });
-                });
+                for (const coordinate of coordinates) {
+                    const touch = touchInstances[coordinate.id];
 
-                const pick_svg = html`<svg style="width: 20px;height: 15px;" xmlns="http://www.w3.org/2000/svg" version="1.0" viewBox="0 0 1079.000000 1280.000000" preserveAspectRatio="xMidYMid meet">
+                    if (event.type === 'touchend' || event.type === 'mouseup') {
+                        if (touch) {
+                            touch.end = true;
+                        }
+                    } else {
+                        if (!touch) {
+                            touchInstances[coordinate.id] = {
+                                id: coordinate.id,
+                                prevX: coordinate.x,
+                                prevY: coordinate.y,
+                                x: coordinate.x,
+                                y: coordinate.y,
+                                startX: coordinate.x,
+                                startY: coordinate.y,
+                            };
+                        } else {
+                            touch.prevX = touch.x;
+                            touch.prevY = touch.y;
+                            touch.x = coordinate.x;
+                            touch.y = coordinate.y;
+                        }
+                    }
+                }
+
+                if (event.type === 'touchstart' || event.type === 'mousedown') {
+                    always_pluck = true;
+                    Object.values(touchInstances).filter(ti => ti.x & ti.y).forEach(touch => {
+                        const { x, y } = touch;
+                        cursor_move_handler(touch);
+                    })
+                }
+                if (event.type === 'touchend' || event.type === 'mouseup') {
+                    Object.values(touchInstances).filter(ti => ti.end).forEach(touch => {
+                        pluckableStrings.forEach(string => {
+                            if (string.hand_plucking && string.pluck_source && string.pluck_source.id === touch.id) {
+
+                                const angledOffset = rotate_coordinates_for_string(string, touch.prevX, touch.prevY);
+                                string.pluck(angledOffset.x, angledOffset.y);
+                            }
+                        });
+                        delete touchInstances[touch.id];
+                    })
+
+                    if (Object.values(touchInstances).length === 0) {
+                        always_pluck = false;
+                    }
+                }
+                if (event.type === 'touchmove' || event.type === 'mousemove') {
+
+                    Object.values(touchInstances).filter(ti => ti.x && ti.y).forEach(touch => {
+                        const { x, y } = touch;
+                        const prev_cursor = touch.prevX && touch.prevY ? { x: touch.prevX, y: touch.prevY } : undefined;
+                        if (prev_cursor) {
+                            let distance = Math.sqrt(Math.pow(x - prev_cursor.x, 2) + Math.pow(y - prev_cursor.y, 2));
+                            if (distance > 5) {
+                                let slices = Math.floor(distance / 5);
+                                for (let i = 1; i <= slices; i++) {
+                                    const interpolated_touch = {
+                                        ...touch,
+                                        x: prev_cursor.x + i * (x - prev_cursor.x) / slices,
+                                        y: prev_cursor.y + i * (y - prev_cursor.y) / slices
+                                    };
+                                    cursor_move_handler(interpolated_touch);
+                                }
+                            }
+                        }
+                        cursor_move_handler(touch);
+                    })
+                }
+
+            }
+
+            ['touchstart', 'touchmove', 'touchend', 'mousedown', 'mousemove', 'mouseup'].forEach(eventName => {
+                canvas.addEventListener(eventName, handleClickOrTouchEvents, { passive: false });
+            });
+
+            const pick_svg = html`<svg style="width: 20px;height: 15px;" xmlns="http://www.w3.org/2000/svg" version="1.0" viewBox="0 0 1079.000000 1280.000000" preserveAspectRatio="xMidYMid meet">
 <metadata>
 Created by potrace 1.15, written by Peter Selinger 2001-2017
 </metadata>
@@ -903,147 +1099,149 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
 </svg>`
 
 
-                class Controls extends Component {
-                    constructor() {
-                        super();
-                        this.state = {
-                            canvas_mode: window.canvas_mode,
-                            snap_to_note: window.snap_to_note,
-                            show_presets: false,
+            class Controls extends Component {
+                constructor() {
+                    super();
+                    this.state = {
+                        canvas_mode: window.canvas_mode,
+                        snap_to_note: window.snap_to_note,
+                        show_presets: false,
+                    }
+                }
+                componentDidMount() {
+                    window.addEventListener('keydown', (e) => {
+                        if (e.shiftKey) {
+                            start_drawing();
+                            this.setState({ canvas_mode: CanvasModes.draw });
                         }
-                    }
-                    componentDidMount() {
-                        window.addEventListener('keydown', (e) => {
-                            if(e.shiftKey) {
-                                start_drawing();
-                                this.setState({canvas_mode: CanvasModes.draw});
-                            }
-                        })
-                        window.addEventListener('keyup', (e) => {
-                            if(window.canvas_mode == CanvasModes.draw) {
-                                finish_drawing_string();
-                                stop_drawing();
-                                this.setState({canvas_mode: CanvasModes.pluck});
-                            }
-                        })
-                    }
+                    })
+                    window.addEventListener('keyup', (e) => {
+                        if (window.canvas_mode == CanvasModes.draw) {
+                            finish_drawing_string();
+                            stop_drawing();
+                            this.setState({ canvas_mode: CanvasModes.pluck });
+                        }
+                    })
+                }
 
-                    
-                    render() {
-                        const touch_device = 'ontouchstart' in document.documentElement;
-                        const preset_slugs = JSON.parse(localStorage.getItem('preset_slugs')) || [];
-                        const presets = preset_slugs.map(slug => JSON.parse(localStorage.getItem('preset:'+slug)));
-                        const { canvas_mode } = this.state;
-                        return html`
+
+                render() {
+                    const touch_device = 'ontouchstart' in document.documentElement;
+                    const preset_slugs = JSON.parse(localStorage.getItem('preset_slugs')) || [];
+                    const presets = preset_slugs.map(slug => JSON.parse(localStorage.getItem('preset:' + slug)));
+                    const { canvas_mode } = this.state;
+                    return html`
                             <div class='controls-inner'>
                                 <div class='draw-mode-button item toggle'>
                                     <span class='choice ${canvas_mode == CanvasModes.pluck ? 'selected' : ''}' onClick=${() => {
-                                        this.setState({canvas_mode: CanvasModes.pluck});
-                                        window.canvas_mode = CanvasModes.pluck;
-                                        stop_drawing();
-                                    }}>
+                            this.setState({ canvas_mode: CanvasModes.pluck });
+                            window.canvas_mode = CanvasModes.pluck;
+                            stop_drawing();
+                        }}>
                                         ${pick_svg} Pluck
                                     </span>
                                     <span class='choice ${canvas_mode == CanvasModes.draw ? 'selected' : ''}' onClick=${() => {
-                                        this.setState({canvas_mode: CanvasModes.draw});
-                                        window.canvas_mode = CanvasModes.draw;
-                                        start_drawing();
-                                    }}>
+                            this.setState({ canvas_mode: CanvasModes.draw });
+                            window.canvas_mode = CanvasModes.draw;
+                            start_drawing();
+                        }}>
                                         ✏️ Draw ${!touch_device ? html`<span class='icon'>⇧ shift</span>` : ``}
                                     </span>
                                     <span class='choice ${canvas_mode == CanvasModes.erase ? 'selected' : ''}' onClick=${() => {
-                                        this.setState({canvas_mode: CanvasModes.erase});
-                                        window.canvas_mode = CanvasModes.erase;
-                                        // start_drawing();
-                                    }}>
+                            this.setState({ canvas_mode: CanvasModes.erase });
+                            window.canvas_mode = CanvasModes.erase;
+                            // start_drawing();
+                        }}>
                                         🧹 Erase
                                     </span>
 
                                     <span class='choice' onClick=${() => {
-                                        start_time = Date.now() + 1000;
-                                        // get midi from url hash like #rach3.mid
-                                        const midi_filename = window.location.hash.replace('#', '') || 'rach3.mid';
-                                        set_remote_midi_track("/legacy/midis/"+midi_filename);
-                                    }}>
+                            start_time = Date.now() + 1000;
+                            // get midi from url hash like #rach3.mid
+                            const midi_filename = window.location.hash.replace('#', '') || 'rach3.mid';
+                            set_remote_midi_track("/legacy/midis/" + midi_filename);
+                        }}>
                                         MIDI
                                     </span>
                                 </div>
 
                                 <div class='item toggle ${canvas_mode == CanvasModes.draw ? '' : 'inactive'}' onClick=${() => {
-                                    this.setState({snap_to_note: !this.state.snap_to_note});
-                                    window.snap_to_note = !this.state.snap_to_note;
-                                }}>
+                            this.setState({ snap_to_note: !this.state.snap_to_note });
+                            window.snap_to_note = !this.state.snap_to_note;
+                        }}>
                                     <span class='choice ${this.state.snap_to_note ? 'selected' : ''}'>Snap to note</span>
                                     <span class='choice ${this.state.snap_to_note ? '' : 'selected'}'>Precise</span>
                                 </div>
                                 <div class='gap'></div>
                                 <div class='item' onClick=${() => {
-                                    const name = prompt('Save preset as');
-                                    // convert name to slug
-                                    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '').replace(/^-/, '');
-                                    // save to localstorage
-                                    const preset_slugs = JSON.parse(localStorage.getItem('preset_slugs')) || [];
-                                    if(preset_slugs.includes(slug)) {
-                                        const overwrite = confirm('Overwrite existing preset?');
-                                        if(!overwrite) {
-                                            return;
-                                        }
-                                    }
-                                    preset_slugs.push(slug);
-                                    localStorage.setItem('preset_slugs', JSON.stringify(preset_slugs));
-                                    localStorage.setItem('preset:'+slug, JSON.stringify({name, slug, strings: pluckableStrings.map(s => { return {string_center: s.string_center, string_width: s.string_width, angle: s.angle} })}));
-                                }}>
+                            const name = prompt('Save preset as');
+                            // convert name to slug
+                            const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '').replace(/^-/, '');
+                            // save to localstorage
+                            const preset_slugs = JSON.parse(localStorage.getItem('preset_slugs')) || [];
+                            if (preset_slugs.includes(slug)) {
+                                const overwrite = confirm('Overwrite existing preset?');
+                                if (!overwrite) {
+                                    return;
+                                }
+                            }
+                            preset_slugs.push(slug);
+                            const screen = { width, height };
+                            console.log('screen', screen);
+                            localStorage.setItem('preset_slugs', JSON.stringify(preset_slugs));
+                            localStorage.setItem('preset:' + slug, JSON.stringify({ name, slug, strings: pluckableStrings.map(s => { return { string_center: s.string_center, freq: s.freq, string_width: s.string_width, angle: s.angle, screen } }) }));
+                        }}>
                                     Save
                                 </div>
                                 <div class='item' onClick=${() => {
-                                    this.setState({show_presets: !this.state.show_presets});
-                                }}>
+                            this.setState({ show_presets: !this.state.show_presets });
+                        }}>
                                     Load
                                 </div>
                                 <div class='item' onClick=${() => {
-                                    resetAndAddStrings(canvas_jq, audioShader, []);
-                                }}>
+                            resetAndAddStrings(canvas_jq, audioShader, []);
+                        }}>
                                     Clear
                                 </div>
                             </div>
                             ${this.state.show_presets ? html`
                                 <div id='presets'>
                                     <div class='close' onClick=${() => {
-                                        this.setState({show_presets: false});
-                                    }}>X</div>
+                                this.setState({ show_presets: false });
+                            }}>X</div>
                                     <div class='preset' onClick=${() => {
-                                        this.setState({show_presets: false});
-                                        resetAndAddStrings(canvas_jq, audioShader, getSpiralingStrings(canvas_jq));
-                                    }}>
+                                this.setState({ show_presets: false });
+                                resetAndAddStrings(canvas_jq, audioShader, getSpiralingStrings(canvas_jq));
+                            }}>
                                         <div class='preset-name'>Spiral</div>
                                         <div class='preset-description'>A spiral of strings</div>
                                     </div>
                                     <div class='preset' onClick=${() => {
-                                        this.setState({show_presets: false});
-                                        resetAndAddStrings(canvas_jq, audioShader, get72strings(canvas_jq));
-                                    }}>
+                                this.setState({ show_presets: false });
+                                resetAndAddStrings(canvas_jq, audioShader, get72strings(canvas_jq));
+                            }}>
                                         <div class='preset-name'>72 strings</div>
                                         <div class='preset-description'>A lot of strings</div>
                                     </div>
                                     <div class='preset' onClick=${() => {
-                                        this.setState({show_presets: false});
-                                        resetAndAddStrings(canvas_jq, audioShader, getTwoFullOctaveStrings(canvas_jq));
-                                    }}>
+                                this.setState({ show_presets: false });
+                                resetAndAddStrings(canvas_jq, audioShader, getTwoFullOctaveStrings(canvas_jq));
+                            }}>
                                         <div class='preset-name'>2 octaves</div>
                                         <div class='preset-description'>Two octaves of strings</div>
                                     </div>
                                     <div class='preset' onClick=${() => {
-                                        this.setState({show_presets: false});
-                                        resetAndAddStrings(canvas_jq, audioShader, getChordStrings(canvas_jq));
-                                    }}>
+                                this.setState({ show_presets: false });
+                                resetAndAddStrings(canvas_jq, audioShader, getChordStrings(canvas_jq));
+                            }}>
                                         <div class='preset-name'>Chords</div>
                                         <div class='preset-description'>C, G, Am, F chords</div>
                                     </div>
                                     ${presets.map(preset => html`
                                         <div class='preset' onClick=${() => {
-                                            this.setState({show_presets: false});
-                                            resetAndAddStrings(canvas_jq, audioShader, preset.strings);
-                                        }}>
+                                    this.setState({ show_presets: false });
+                                    resetAndAddStrings(canvas_jq, audioShader, preset.strings);
+                                }}>
                                             <div class='preset-name'>${preset.name}</div>
                                             <div class='preset-description'>${preset.strings.length} strings</div>
                                         </div>
@@ -1051,13 +1249,13 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                 </div>
                             ` : html``}
                         `
-                    }
                 }
-                render(html`<${Controls} />`, document.getElementById('controls'))
-            });
+            }
+            render(html`<${Controls} />`, document.getElementById('controls'))
+        });
 
 
-        </script>
-    </body>
+    </script>
+</body>
+
 </html>
-

@@ -80,6 +80,9 @@ Notes = {
     },
 
     note_to_halftone: function (note) {
+        if(!note) {
+            return null;
+        }
         var note_shift = Notes.NOTE_TO_HALFTONE[note.substr(0, 1).toUpperCase()]
         // console.log(note, note_shift)
 
