@@ -67,6 +67,7 @@
 
         #controls {
             position: fixed;
+            top: 0;
             bottom: 0;
             left: 0;
             right: 0;
@@ -74,7 +75,23 @@
             zoom: 0.8;
         }
 
-        #controls .controls-inner {
+        #controls .controls-bottom-left {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+        }
+        #controls .controls-top-right {
+            position: absolute;
+            top: 0;
+            right: 0;
+            box-sizing: border-box;
             display: flex;
             flex-direction: row;
             justify-content: center;
@@ -83,13 +100,22 @@
         }
 
         #controls .item {
-            padding: 10px;
+            padding: 0 10px;
             background: #fff;
             color: #000;
             cursor: pointer;
             margin: 5px 10px;
+            line-height: 28px;
+            font-size: 16px;
             pointer-events: all;
             border-radius: 5px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+        }
+
+        #controls .section {
+            pointer-events: all;
             display: flex;
             flex-direction: row;
             align-items: center;
@@ -114,10 +140,8 @@
             display: inline-block;
             margin-left: 5px;
             border-radius: 2px;
-            background: #7c7c7c;
-            color: #fff;
+            background: #7c7c7c22;
             padding: 2px;
-            box-shadow: 2px 2px 2px #000;
         }
 
         #controls .item.toggle {
@@ -130,8 +154,9 @@
             background: none;
             color: #aaa;
             display: inline-block;
-            margin: 2px;
-            padding: 5px;
+            margin: 0 2px;
+            padding: 0 7px;
+            background: #ffffff11;
             border-radius: 5px;
             transition: all 0.2s ease-in-out;
             line-height: 30px;
@@ -529,7 +554,7 @@
                     angle: string.angle,
                     duration,
                     audio: audioShader,
-                    string_slack: Math.max(5, Math.min(20, string.string_width / 5)),
+                    string_slack: Math.max(20, Math.min(20, string.string_width / 5)),
                 })
                 pluckableStrings.push(drawWave);
                 midi_string_map[midi_number] = drawWave;
@@ -707,12 +732,13 @@
             window.midi_paused = true
 
             let speed = 1;
-            let pluck_duration = 150;
+            let pluck_duration = 250;
 
             let notes_map = {}
             let notes_map_cursors = {}
 
             async function set_remote_midi_track(url) {
+                console.log('fetching midi', url);
                 let midi_file = await fetch(url).then(r => r.arrayBuffer());
                 // sate to blob
                 let midi_blob = new Blob([midi_file], { type: 'audio/midi' });
@@ -720,16 +746,30 @@
                 let midi_url = URL.createObjectURL(midi_blob);
                 // use tonejs to load the midi file
                 let midi_json = await Midi.fromUrl(midi_url);
-                console.log(midi_json);
-                set_midi_track(midi_json);
+                // console.log(midi_json);
+                // set_midi_track(midi_json);
+                return midi_json;
             }
 
             function set_midi_track(new_midi_track) {
+                // reset all current plucks
+                pluckableStrings.forEach(s => s.reset_pluck_offsets());
+
+                console.log('playing midi track', new_midi_track);
+                // adjust speed
+                speed = 1;
+                if(new_midi_track.header.ticksPerBeat) {
+                    speed = 1 / (new_midi_track.header.ticksPerBeat / 480);
+                    console.log('speed', speed, new_midi_track.header.ticksPerBeat);
+                }
+
+                note_index = 0;
                 midi_track = new_midi_track;
                 notes = midi_track.tracks[0].notes;
                 notes_map = {}
                 notes_map_cursors = {}
                 notes.forEach(note => {
+                    note.time += 1; // leave time for pluck
                     if (!notes_map[note.midi]) {
                         notes_map[note.midi] = [];
                         notes_map_cursors[note.midi] = 0;
@@ -737,6 +777,7 @@
                     notes_map[note.midi].push(note);
                 })
                 window.midi_paused = false;
+                start_time = Date.now();
             };
 
             let last_frame_time;
@@ -787,8 +828,10 @@
                                 if (time_diff >= pluck_time) {
                                     let offsetX = plucking_string.pluck_offset_x ? plucking_string.pluck_offset_x : plucking_string.string_center.x + (Math.random() * 2 - 1) * plucking_string.string_width / 2;
                                     let progress = (time_diff - pluck_time) / _pluck_duration;
-                                    let velocity = note.velocity ? note.velocity : 1;
-                                    let offsetY = plucking_string.string_center.y + progress * velocity * plucking_string.string_slack;
+                                    let velocity = Math.min(1, note.velocity ? note.velocity*1.5 : 1);
+                                    let offsetY = plucking_string.string_center.y + Math.min(
+                                        plucking_string.string_slack-1, progress * velocity * plucking_string.string_slack
+                                    );
                                     plucking_string.set_pluck_offsets(offsetX, offsetY);
                                 }
                             }
@@ -935,23 +978,37 @@
                     const angledOffset = rotate_coordinates_for_string(string, offsetX, offsetY);
                     const angledOffsetX = angledOffset.x;
                     const angledOffsetY = angledOffset.y;
+                    const prevAngledOffset = rotate_coordinates_for_string(string, prevX, prevY);
+                    const prevAngledOffsetX = prevAngledOffset.x;
+                    const prevAngledOffsetY = prevAngledOffset.y;
                     if (string.hand_plucking && string.pluck_source.id === id) {
                         string.set_pluck_offsets(angledOffsetX, angledOffsetY)
                     } else {
                         if (always_pluck) {
-                            if (angledOffset.x > string.string_position.x && angledOffset.x < string.string_position.x + string.string_width && angledOffset.y > string.string_position.y - auto_pluck_distance && angledOffset.y < string.string_position.y + auto_pluck_distance) {
-
-                                if (string.hand_plucking) {
-                                    string.set_pluck_offsets(angledOffsetX, angledOffsetY)
-                                } else {
-                                    string.set_pluck_offsets(angledOffsetX, angledOffsetY);
+                            // if prev->current line crosses string
+                            if((angledOffsetY - string.string_center.y) * (prevAngledOffsetY - string.string_center.y) < 0 && angledOffsetX > string.string_center.x - string.string_width/2 && angledOffsetX < string.string_center.x + string.string_width/2) {
+                                if(!string.hand_plucking) {
                                     string.hand_plucking = true;
                                     string.pluck_source = touch;
                                     string.stop_sound()
                                 }
-
+                                string.set_pluck_offsets(angledOffsetX, angledOffsetY);
                             }
                         }
+                        // if (always_pluck) {
+                        //     if (angledOffset.x > string.string_position.x && angledOffset.x < string.string_position.x + string.string_width && angledOffset.y > string.string_position.y - auto_pluck_distance && angledOffset.y < string.string_position.y + auto_pluck_distance) {
+
+                        //         if (string.hand_plucking) {
+                        //             string.set_pluck_offsets(angledOffsetX, angledOffsetY)
+                        //         } else {
+                        //             string.set_pluck_offsets(angledOffsetX, angledOffsetY);
+                        //             string.hand_plucking = true;
+                        //             string.pluck_source = touch;
+                        //             string.stop_sound()
+                        //         }
+
+                        //     }
+                        // }
                     }
                 });
             }
@@ -1067,17 +1124,20 @@
                         const prev_cursor = touch.prevX && touch.prevY ? { x: touch.prevX, y: touch.prevY } : undefined;
                         if (prev_cursor) {
                             let distance = Math.sqrt(Math.pow(x - prev_cursor.x, 2) + Math.pow(y - prev_cursor.y, 2));
-                            if (distance > 5) {
-                                let slices = Math.floor(distance / 5);
-                                for (let i = 1; i <= slices; i++) {
-                                    const interpolated_touch = {
-                                        ...touch,
-                                        x: prev_cursor.x + i * (x - prev_cursor.x) / slices,
-                                        y: prev_cursor.y + i * (y - prev_cursor.y) / slices
-                                    };
-                                    cursor_move_handler(interpolated_touch);
-                                }
-                            }
+                            
+                            // dont need to interpolate anymore, because of new pluck logic
+
+                            // if (distance > 5) {
+                            //     let slices = Math.floor(distance / 5);
+                            //     for (let i = 1; i <= slices; i++) {
+                            //         const interpolated_touch = {
+                            //             ...touch,
+                            //             x: prev_cursor.x + i * (x - prev_cursor.x) / slices,
+                            //             y: prev_cursor.y + i * (y - prev_cursor.y) / slices
+                            //         };
+                            //         cursor_move_handler(interpolated_touch);
+                            //     }
+                            // }
                         }
                         cursor_move_handler(touch);
                     })
@@ -1131,7 +1191,42 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                     const presets = preset_slugs.map(slug => JSON.parse(localStorage.getItem('preset:' + slug)));
                     const { canvas_mode } = this.state;
                     return html`
-                            <div class='controls-inner'>
+                            <div class='controls-top-right'>
+                                ${this.state.show_midi_player ? html`
+                                    <div class='section' id='midi-player'>
+                                        <select onChange=${async (e) => {
+                                            const midi_file = e.target.value;
+                                            this.setState({ selected_midi: midi_file });
+                                        }}>
+                                            <option value=''>Select MIDI</option>
+                                            ${[
+                                                'bach_air.mid',
+                                                'bach2.mid',
+                                                'fantasie.mid',
+                                                'gymnopedie_1.mid',
+                                                'rach3.mid',
+                                                'sospiro.mid',
+                                                'sweet.mid'
+                                            ].map(midi => html`
+                                                <option value=${midi}>${midi}</option>
+                                            `)}
+                                        </select>
+                                        <div class='item' onClick=${async () => {
+                                            const midi_file = this.state.selected_midi;
+                                            const midi_json = await set_remote_midi_track("/legacy/midis/" + midi_file);
+                                            set_midi_track(midi_json);
+                                        }}>
+                                            Play
+                                        </div>
+                                    </div>
+                                ` : html``}
+                                <div class='item' onClick=${() => {
+                                    this.setState({ show_midi_player: !this.state.show_midi_player });
+                                }}>
+                                    ${this.state.show_midi_player ? 'Hide' : '🎵 MIDI Player'}
+                                </div>
+                            </div>
+                            <div class='controls-bottom-left'>
                                 <div class='draw-mode-button item toggle'>
                                     <span class='choice ${canvas_mode == CanvasModes.pluck ? 'selected' : ''}' onClick=${() => {
                             this.setState({ canvas_mode: CanvasModes.pluck });
@@ -1145,7 +1240,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                             window.canvas_mode = CanvasModes.draw;
                             start_drawing();
                         }}>
-                                        ✏️ Draw ${!touch_device ? html`<span class='icon'>⇧ shift</span>` : ``}
+                                        ✏️ Draw
                                     </span>
                                     <span class='choice ${canvas_mode == CanvasModes.erase ? 'selected' : ''}' onClick=${() => {
                             this.setState({ canvas_mode: CanvasModes.erase });
@@ -1153,15 +1248,6 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                             // start_drawing();
                         }}>
                                         🧹 Erase
-                                    </span>
-
-                                    <span class='choice' onClick=${() => {
-                            start_time = Date.now() + 1000;
-                            // get midi from url hash like #rach3.mid
-                            const midi_filename = window.location.hash.replace('#', '') || 'rach3.mid';
-                            set_remote_midi_track("/legacy/midis/" + midi_filename);
-                        }}>
-                                        MIDI
                                     </span>
                                 </div>
 
