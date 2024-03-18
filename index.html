@@ -1206,14 +1206,16 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                                 'gymnopedie_1.mid',
                                                 'rach3.mid',
                                                 'sospiro.mid',
-                                                'sweet.mid'
+                                                'chopin_polonaise.mid',
+                                                'chopin_vivace.mid',
+                                                'mozart_13.mid',
                                             ].map(midi => html`
                                                 <option value=${midi}>${midi}</option>
                                             `)}
                                         </select>
                                         <div class='item' onClick=${async () => {
                                             const midi_file = this.state.selected_midi;
-                                            const midi_json = await set_remote_midi_track("/legacy/midis/" + midi_file);
+                                            const midi_json = await set_remote_midi_track("/midis/" + midi_file);
                                             set_midi_track(midi_json);
                                         }}>
                                             Play
