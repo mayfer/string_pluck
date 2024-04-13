@@ -283,7 +283,7 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
                 '#bbb',// color,
                 3 //numberOfCorners
             )
-        } else {
+        } else if(offsetY < this.string_position.y) {
             drawRoundedPolygon(context,
                 offsetX,
                 offsetY - 10,

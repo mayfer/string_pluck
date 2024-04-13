@@ -905,7 +905,7 @@
                 }
 
 
-
+                /*
                 for (let coordinate of Object.values(touchInstances)) {
                     // draw circle where touch is if in pluck mode
                     if (window.canvas_mode == CanvasModes.pluck) {
@@ -917,6 +917,7 @@
                         context.restore();
                     }
                 }
+                */
             }
 
 
@@ -986,7 +987,7 @@
                     } else {
                         if (always_pluck) {
                             // if prev->current line crosses string
-                            if((angledOffsetY - string.string_center.y) * (prevAngledOffsetY - string.string_center.y) < 0 && angledOffsetX > string.string_center.x - string.string_width/2 && angledOffsetX < string.string_center.x + string.string_width/2) {
+                            if((angledOffsetY - string.string_center.y) * (prevAngledOffsetY - string.string_center.y) <= 0 && angledOffsetX > string.string_center.x - string.string_width/2 && angledOffsetX < string.string_center.x + string.string_width/2) {
                                 if(!string.hand_plucking) {
                                     string.hand_plucking = true;
                                     string.pluck_source = touch;
@@ -1215,7 +1216,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                         </select>
                                         <div class='item' onClick=${async () => {
                                             const midi_file = this.state.selected_midi;
-                                            const midi_json = await set_remote_midi_track("/midis/" + midi_file);
+                                            const midi_json = await set_remote_midi_track("./midis/" + midi_file);
                                             set_midi_track(midi_json);
                                         }}>
                                             Play
