@@ -234,6 +234,14 @@
             margin: 0;
         }
 
+        .speed-slider {
+            appearance: none;
+            color: #fff;
+            border: 1px solid #fff;
+            background: #000;
+            border-radius: 5px;
+        }
+
         @media only screen and (max-width: 800px) {
             #controls {
                 zoom: 0.6;
@@ -265,7 +273,7 @@
         let audioShader;
         window.audioShader = audioShader;
 
-        const base_freq = Notes.note_to_freq('A2');
+        const base_freq = Notes.note_to_freq('E2');
 
         const CanvasModes = {
             pluck: 'pluck',
@@ -732,10 +740,15 @@
             window.midi_paused = true
 
             let speed = 1;
-            let pluck_duration = 250;
+            let pluck_duration = 0.250;
 
             let notes_map = {}
             let notes_map_cursors = {}
+
+            let last_frame_time_ms = Date.now();
+            let note_last_frame_ms = Date.now();
+            let midi_progress_time = 0;
+            let note_time_current = 0;
 
             async function set_remote_midi_track(url) {
                 console.log('fetching midi', url);
@@ -756,8 +769,6 @@
                 pluckableStrings.forEach(s => s.reset_pluck_offsets());
 
                 console.log('playing midi track', new_midi_track);
-                // adjust speed
-                speed = 1;
                 if(new_midi_track.header.ticksPerBeat) {
                     speed = 1 / (new_midi_track.header.ticksPerBeat / 480);
                     console.log('speed', speed, new_midi_track.header.ticksPerBeat);
@@ -778,24 +789,23 @@
                 })
                 window.midi_paused = false;
                 start_time = Date.now();
+                note_last_frame_ms = Date.now();
+                note_time_current = 0;
             };
-
-            let last_frame_time;
 
             let frame = () => {
                 requestAnimationFrame(frame)
                 if (window.idle) {
                     return;
                 }
-                if (last_frame_time && Date.now() - last_frame_time > 1000) {
+                if (last_frame_time_ms && Date.now() - last_frame_time_ms > 1000) {
                     if(window.midi_paused == false) {
                         window.midi_paused = true
                         console.log('pausing due to inactivity?')
                     }
                 }
-                last_frame_time = Date.now();
 
-                let one_sec_ms = 1000 * (1 / speed);
+                let one_sec_ms = 1000;
 
                 context.fillStyle = fill_styles_per_mode[window.canvas_mode];
 
@@ -809,7 +819,7 @@
                 if (!start_time) {
                     start_time = Date.now();
                 }
-                let time_diff = Date.now() - start_time;
+                let note_time_diff = ((Date.now() - note_last_frame_ms)/1000) * speed;
 
                 // if(!document.hasFocus()) {
                 //     window.midi_paused = true;
@@ -822,13 +832,15 @@
                             let plucking_string = midi_string_map[note.midi]
                             if (plucking_string) {
                                 const prev_note = notes_map[midi_num][cursor - 1];
-                                const _pluck_duration = prev_note ? Math.min(pluck_duration, (note.time - prev_note.time) * one_sec_ms / 3) : pluck_duration;
-                                // const _pluck_duration = Math.min(pluck_duration, 
-                                let pluck_time = Math.max((plucking_string.prev_note_time || 0) + 50, note.time * one_sec_ms - _pluck_duration);
-                                if (time_diff >= pluck_time) {
-                                    let offsetX = plucking_string.pluck_offset_x ? plucking_string.pluck_offset_x : plucking_string.string_center.x + (Math.random() * 2 - 1) * plucking_string.string_width / 2;
-                                    let progress = (time_diff - pluck_time) / _pluck_duration;
-                                    let velocity = Math.min(1, note.velocity ? note.velocity*1.5 : 1);
+                                const _pluck_duration = prev_note ? Math.min(pluck_duration, (note.time - prev_note.time) / 3) : pluck_duration;
+
+                                // let pluck_time = Math.max((plucking_string.prev_note_time || 0) + 50, note.time * one_sec_ms - _pluck_duration);
+                                let pluck_time = Math.max((plucking_string.prev_note_time || 0) + 0.050, note.time - _pluck_duration);
+
+                                if (note_time_current >= pluck_time) {
+                                    let offsetX = plucking_string.pluck_offset_x ? plucking_string.pluck_offset_x : plucking_string.string_center.x + Math.max(0, Math.min(0.95, note.velocity ? (note.velocity-0.5)*2 : 1)) * plucking_string.string_width / 2;
+                                    let progress = (note_time_current - pluck_time) / _pluck_duration;
+                                    let velocity = Math.min(1, note.velocity ? note.velocity*2 : 1);
                                     let offsetY = plucking_string.string_center.y + Math.min(
                                         plucking_string.string_slack-1, progress * velocity * plucking_string.string_slack
                                     );
@@ -837,15 +849,15 @@
                             }
                         }
                     })
+                    note_time_current += note_time_diff;
 
                     let note = notes[note_index];
-                    let note_time = note.time * one_sec_ms;
                     let string = midi_string_map[note.midi];
 
-                    if (time_diff >= note_time) {
+                    if (note_time_current >= note.time) {
                         if (string) {
                             string.pluck();
-                            string.prev_note_time = note_time;
+                            string.prev_note_time = note.time;
                         }
                         note_index++;
                         notes_map_cursors[note.midi]++
@@ -854,7 +866,10 @@
                             window.midi_paused = true;
                         }
                     }
+                    note_last_frame_ms = Date.now();
                 }
+
+                last_frame_time_ms = Date.now();
 
                 if ((window.canvas_mode == CanvasModes.draw || window.canvas_mode == CanvasModes.erase) && draw_start && draw_end) {
                     let string_width = Math.sqrt(Math.pow(draw_end.x - draw_start.x, 2) + Math.pow(draw_end.y - draw_start.y, 2))
@@ -1167,6 +1182,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                         canvas_mode: window.canvas_mode,
                         snap_to_note: window.snap_to_note,
                         show_presets: false,
+                        show_midi_player: true,
                     }
                 }
                 componentDidMount() {
@@ -1195,6 +1211,12 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                             <div class='controls-top-right'>
                                 ${this.state.show_midi_player ? html`
                                     <div class='section' id='midi-player'>
+                                        <input type='range' class='speed-slider' min='0' max='100' value='${this.state.speed}' oninput=${(e) => {
+                                            // cast 0:100 to 0.1:10
+                                            const val = (e.target.value < 50) ? (0.5 + e.target.value/100) : (e.target.value-50) / 100 + 1;
+                                            this.setState({ speed: e.target.value});
+                                            speed = val;
+                                        }} />
                                         <select onChange=${async (e) => {
                                             const midi_file = e.target.value;
                                             this.setState({ selected_midi: midi_file });
