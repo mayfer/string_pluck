@@ -193,8 +193,12 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
         context.stroke();
 
         // write note name
-        context.font = "20px Arial";
+        context.font = "15px Arial";
         context.fillStyle = "rgba(255, 255, 255, " + (brightness - 0.1) + ")"
+        context.shadowOffsetX = 0;  // Horizontal shadow displacement
+        context.shadowOffsetY = 0;  // Vertical shadow displacement
+        context.shadowBlur = 3;     // Blur level
+        context.shadowColor = 'black';  // Shadow color
         context.fillText(this.note_name, this.string_width + this.string_position.x + 10, this.string_position.y + 5);
 
         context.restore();
@@ -247,8 +251,14 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
         }
 
         // write note name
-        context.font = "20px Arial";
+        context.font = "15px Arial";
         context.fillStyle = plucking_color;
+
+        context.shadowOffsetX = 0;  // Horizontal shadow displacement
+        context.shadowOffsetY = 0;  // Vertical shadow displacement
+        context.shadowBlur = 3;     // Blur level
+        context.shadowColor = 'black';  // Shadow color
+
         context.fillText(this.note_name, this.string_width + this.string_position.x + 10, this.string_position.y + 5);
 
 

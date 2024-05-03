@@ -708,7 +708,7 @@
                     draw_end = { x: offsetX, y: offsetY };
                 }
             })
-            canvas_jq.on('mouseup touchend', (e) => {
+            canvas_jq.on('mouseup touchend touchcancel', (e) => {
                 e.preventDefault();
                 if (draw_start) {
                     if (window.canvas_mode == CanvasModes.draw) {
@@ -1064,6 +1064,7 @@
                     case 'touchstart':
                     case 'touchmove':
                     case 'touchend':
+                    case 'touchcancel':
                         eventType = 'touch';
                         coordinates = Array.from(event.changedTouches).map(touch => {
                             const x = touch.clientX;
@@ -1086,7 +1087,7 @@
                 for (const coordinate of coordinates) {
                     const touch = touchInstances[coordinate.id];
 
-                    if (event.type === 'touchend' || event.type === 'mouseup') {
+                    if (event.type === 'touchend' || event.type === 'mouseup' || event.type === 'touchcancel') {
                         if (touch) {
                             touch.end = true;
                         }
@@ -1113,11 +1114,10 @@
                 if (event.type === 'touchstart' || event.type === 'mousedown') {
                     always_pluck = true;
                     Object.values(touchInstances).filter(ti => ti.x & ti.y).forEach(touch => {
-                        const { x, y } = touch;
                         cursor_move_handler(touch);
                     })
                 }
-                if (event.type === 'touchend' || event.type === 'mouseup') {
+                if (event.type === 'touchend' || event.type === 'mouseup' || event.type === 'touchcancel') {
                     Object.values(touchInstances).filter(ti => ti.end).forEach(touch => {
                         pluckableStrings.forEach(string => {
                             if (string.hand_plucking && string.pluck_source && string.pluck_source.id === touch.id) {
@@ -1161,7 +1161,7 @@
 
             }
 
-            ['touchstart', 'touchmove', 'touchend', 'mousedown', 'mousemove', 'mouseup'].forEach(eventName => {
+            ['touchstart', 'touchmove', 'touchend', 'touchcancel', 'mousedown', 'mousemove', 'mouseup'].forEach(eventName => {
                 canvas.addEventListener(eventName, handleClickOrTouchEvents, { passive: false });
             });
 
@@ -1232,6 +1232,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                                 'chopin_polonaise.mid',
                                                 'chopin_vivace.mid',
                                                 'mozart_13.mid',
+                                                'GeneratedMelody.mid'
                                             ].map(midi => html`
                                                 <option value=${midi}>${midi}</option>
                                             `)}
