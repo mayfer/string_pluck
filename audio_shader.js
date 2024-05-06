@@ -92,7 +92,7 @@ function AudioShader(num_strings, num_overtones) {
     for (int i = 0; i < NUM_STRINGS; i++) {
         float ii = float(i);
 
-        float amp = sqrt(2.0 / (pow(ii, 1.7)/2. + 1.0)) / (7.0);
+        float amp = sqrt(2.0 / (pow(ii, 1.7)/2. + 1.0)) / (9.0);
         
         if(amp > 0.00001) {
             for(int j = 0; j < NUM_OVERTONES; j++) {
@@ -241,7 +241,7 @@ function AudioShader(num_strings, num_overtones) {
         // node.connect(this.audioCtx.destination);
 
         const gainNode = this.audioCtx.createGain();
-        gainNode.gain.value = 2;
+        gainNode.gain.value = 1;
         node.connect(gainNode);
         gainNode.connect(this.audioCtx.destination);
 

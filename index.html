@@ -242,6 +242,10 @@
             border-radius: 5px;
         }
 
+        #midi-player {
+            color: #aaa;
+        }
+
         @media only screen and (max-width: 800px) {
             #controls {
                 zoom: 0.6;
@@ -498,6 +502,33 @@
                         });
                     }
                 }
+            }
+
+            return initial_strings;
+        }
+
+        const getMidiNoteStrings = (canvas_jq, midi_numbers) => { 
+
+            let width = canvas_jq.width();
+            let height = canvas_jq.height();
+            const initial_strings = [];
+            const start_y = 100;
+            for(var i=0; i<midi_numbers.length; i++) {
+                const midi_number = midi_numbers[i];
+                if (midi_number == 0) continue;
+
+                const center = width / 2;
+                const top = start_y + (i + 1) * ((height - 200) / midi_numbers.length);
+
+                const note_offset = midi_number - midi_number_a1;
+                initial_strings.push({
+                    string_center: { x: center, y: top },
+                    //string_width: Notes.relative_note(width_base_freq, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
+                    string_width: Notes.relative_note(width_base_freq * 2, -note_offset),
+                    freq: getFreqFromMidiNumber(midi_number),
+                    angle: 0, // i * Math.PI / 64
+                    midi_number,
+                });
             }
 
             return initial_strings;
@@ -764,6 +795,13 @@
                 return midi_json;
             }
 
+            function smoothTransition(x, x_start, x_end, start_value, end_value) {
+                const scaledX = (x - x_start) / (x_end - x_start) * 10 - 5;
+                const sigmoid = 1 / (1 + Math.exp(-scaledX));
+                return start_value + (end_value - start_value) * sigmoid;
+            }
+
+
             function set_midi_track(new_midi_track) {
                 // reset all current plucks
                 pluckableStrings.forEach(s => s.reset_pluck_offsets());
@@ -812,6 +850,9 @@
                 }
                 notes = Object.values(notes_map).flat();
                 notes.sort((a, b) => a.time - b.time);
+
+                const midi_strings = getMidiNoteStrings(canvas_jq, Object.keys(notes_map)); 
+                resetAndAddStrings(canvas_jq, audioShader, midi_strings);
 
                 window.midi_paused = false;
                 start_time = Date.now();
@@ -903,9 +944,14 @@
                                 let pluck_time = Math.max((plucking_string.prev_note_time || 0), note.time - _pluck_duration);
 
                                 if (note_time_current >= pluck_time) {
-                                    const velocity_based_x_offset = plucking_string.string_center.x + Math.max(0, Math.min(0.95, note.velocity ? Math.sqrt(note.velocity) : 1)) * plucking_string.string_width / 2
+                                    const velocity_based_x_offset = Math.max(0, Math.min(0.95, note.velocity ? Math.sqrt(note.velocity) : 1)) * plucking_string.string_width / 2
 
-                                    let offsetX = velocity_based_x_offset;
+                                    const a = 12 / 440; // Scale factor
+                                    const b = -6; // Shift to center the sigmoid at the midpoint of 440 and 880
+                                    const high_freq_damping = smoothTransition(plucking_string.freq, 330, 880, 1, 0);
+                                    // console.log(plucking_string.freq, high_freq_damping);
+
+                                    let offsetX = plucking_string.string_center.x + velocity_based_x_offset * high_freq_damping;
 
                                     let progress = _pluck_duration > 0 ? (note_time_current - pluck_time) / _pluck_duration : 0.5;
                                     let velocity = Math.min(0.99, note.velocity ? note.velocity*2 : 1);
@@ -1124,7 +1170,7 @@
                 let eventType;
                 let coordinates;
 
-                if ((event.type === 'touchstart' || event.type === 'mousedown') && audioShader.audioCtx.state === 'suspended') {
+                if ((event.type == "click" ||event.type === 'touchstart' || event.type === 'mousedown') && audioShader.audioCtx.state === 'suspended') {
                     audioShader.resume();
                 }
 
@@ -1252,6 +1298,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                         show_presets: false,
                         show_midi_player: true,
                         midis: [],
+                        speed: 50,
                     }
                 }
                 componentDidMount() {
@@ -1291,6 +1338,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                             <div class='controls-top-right'>
                                 ${this.state.show_midi_player ? html`
                                     <div class='section' id='midi-player'>
+                                        ${(speed).toFixed(2)}x
                                         <input type='range' class='speed-slider' min='0' max='100' value='${this.state.speed}' oninput=${(e) => {
                                             // cast 0:100 to 0.1:10
                                             const val = (e.target.value < 50) ? (0.5 + e.target.value/100) : (e.target.value-50) / 100 + 1;
@@ -1300,6 +1348,10 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                         <select onChange=${async (e) => {
                                             const midi_file = e.target.value;
                                             this.setState({ selected_midi: midi_file });
+
+                                            const midi_json = await set_remote_midi_track("./midis/" + midi_file);
+                                            set_midi_track(midi_json);
+                                            this.setState({ playing: true });
                                         }}>
                                             <option value=''>Select MIDI</option>
                                             ${this.state.midis.map(midi => html`
@@ -1307,11 +1359,19 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                             `)}
                                         </select>
                                         <div class='item' onClick=${async () => {
-                                            const midi_file = this.state.selected_midi;
-                                            const midi_json = await set_remote_midi_track("./midis/" + midi_file);
-                                            set_midi_track(midi_json);
+                                            if(!this.state.playing) {
+                                                const midi_file = this.state.selected_midi;
+                                                const midi_json = await set_remote_midi_track("./midis/" + midi_file);
+                                                set_midi_track(midi_json);
+                                                this.setState({ playing: true });
+                                            } else {
+                                                this.setState({ playing: false });
+                                                // stop plucking all strings
+                                                pluckableStrings.forEach(s => s.reset_pluck_offsets());
+                                                window.midi_paused = true;
+                                            }
                                         }}>
-                                            Play
+                                            ${this.state.playing ? "⏹ Stop" : "▶️ Play"}
                                         </div>
                                     </div>
                                 ` : html``}
