@@ -75,7 +75,6 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
     }
     this.context.lineWidth = this.lineWidth;
 
-    // console.log("line", this.context.lineWidth, "width", window.innerWidth);
     this.wave_height = wave_height;
     this.wave_halfheight = this.wave_height / 2;
     this.center = this.wave_halfheight;
@@ -105,7 +104,6 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
             }
             freqs[freq] = resonance;
         }
-        //console.log(Object.keys(freqs).map(f => `${f}hz: ${freqs[f]}`).join("\n"));
         return freqs;
     }
 

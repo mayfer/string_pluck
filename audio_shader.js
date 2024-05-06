@@ -245,6 +245,8 @@ function AudioShader(num_strings, num_overtones) {
         node.connect(gainNode);
         gainNode.connect(this.audioCtx.destination);
 
+        
+
         return node;
     }
 

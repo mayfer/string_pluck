@@ -562,7 +562,7 @@
                     angle: string.angle,
                     duration,
                     audio: audioShader,
-                    string_slack: Math.max(20, Math.min(20, string.string_width / 5)),
+                    string_slack: Math.max(10, Math.min(20, string.string_width / 5)),
                 })
                 pluckableStrings.push(drawWave);
                 midi_string_map[midi_number] = drawWave;
@@ -776,9 +776,19 @@
 
                 note_index = 0;
                 midi_track = new_midi_track;
-                notes = midi_track.tracks[0].notes;
+                notes = [];
                 notes_map = {}
                 notes_map_cursors = {}
+
+                midi_track.tracks.forEach(t => {
+                    t.notes.forEach(n => {
+                        if(n.midi) {
+                            notes.push(n);
+                        }
+                    })
+                })
+                notes.sort((a, b) => a.time - b.time);
+                
                 notes.forEach(note => {
                     note.time += 1; // leave time for pluck
                     if (!notes_map[note.midi]) {
@@ -787,6 +797,7 @@
                     }
                     notes_map[note.midi].push(note);
                 })
+
                 window.midi_paused = false;
                 start_time = Date.now();
                 note_last_frame_ms = Date.now();
@@ -810,11 +821,26 @@
                 context.fillStyle = fill_styles_per_mode[window.canvas_mode];
 
                 context.fillRect(0, 0, context.width, context.height);
+
+                
+                // pluckableStrings.forEach(s => {
+                    //     if (s.playing) s.draw()
+                    //     else if (s.plucking) s.draw_pluck();
+                    //     else s.draw_still();
+                    // });
+                
+                // draw non-plucking strings first:
                 pluckableStrings.forEach(s => {
-                    if (s.playing) s.draw()
-                    else if (s.plucking) s.draw_pluck();
-                    else s.draw_still();
+                    if(!s.plucking) {
+                        if (s.playing) s.draw()
+                        else s.draw_still();
+                    }
                 });
+                pluckableStrings.forEach(s => {
+                    if (s.plucking) s.draw_pluck();
+                });
+                    
+
 
                 if (!start_time) {
                     start_time = Date.now();
@@ -832,15 +858,23 @@
                             let plucking_string = midi_string_map[note.midi]
                             if (plucking_string) {
                                 const prev_note = notes_map[midi_num][cursor - 1];
-                                const _pluck_duration = prev_note ? Math.min(pluck_duration, (note.time - prev_note.time) / 3) : pluck_duration;
+                                const time_since_prev_note = prev_note ? note.time - prev_note.time : undefined;
+                                // if(time_since_prev_note !== undefined && time_since_prev_note < 0.001) {
+                                //     console.log('skipping playing note', note.time, prev_note.time);
+                                //     return;
+                                // }
+                                const _pluck_duration = time_since_prev_note ? Math.min(pluck_duration, time_since_prev_note / 3) : pluck_duration;
 
                                 // let pluck_time = Math.max((plucking_string.prev_note_time || 0) + 50, note.time * one_sec_ms - _pluck_duration);
-                                let pluck_time = Math.max((plucking_string.prev_note_time || 0) + 0.050, note.time - _pluck_duration);
+                                let pluck_time = Math.max((plucking_string.prev_note_time || 0), note.time - _pluck_duration);
 
                                 if (note_time_current >= pluck_time) {
-                                    let offsetX = plucking_string.pluck_offset_x ? plucking_string.pluck_offset_x : plucking_string.string_center.x + Math.max(0, Math.min(0.95, note.velocity ? (note.velocity-0.5)*2 : 1)) * plucking_string.string_width / 2;
-                                    let progress = (note_time_current - pluck_time) / _pluck_duration;
-                                    let velocity = Math.min(1, note.velocity ? note.velocity*2 : 1);
+                                    const velocity_based_x_offset = plucking_string.string_center.x + Math.max(0, Math.min(0.95, note.velocity ? Math.sqrt(note.velocity) : 1)) * plucking_string.string_width / 2
+
+                                    let offsetX = velocity_based_x_offset;
+
+                                    let progress = _pluck_duration > 0 ? (note_time_current - pluck_time) / _pluck_duration : 0.5;
+                                    let velocity = Math.min(0.99, note.velocity ? note.velocity*2 : 1);
                                     let offsetY = plucking_string.string_center.y + Math.min(
                                         plucking_string.string_slack-1, progress * velocity * plucking_string.string_slack
                                     );
@@ -1232,7 +1266,10 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                                 'chopin_polonaise.mid',
                                                 'chopin_vivace.mid',
                                                 'mozart_13.mid',
-                                                'GeneratedMelody.mid'
+                                                'GeneratedMelody.mid',
+                                                'debussy-clair-de-lune.mid',
+                                                'chopin-nocturne-op9-no2.mid',
+                                                'mozart-alla-turca.mid',
                                             ].map(midi => html`
                                                 <option value=${midi}>${midi}</option>
                                             `)}
