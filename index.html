@@ -562,7 +562,7 @@
                     angle: string.angle,
                     duration,
                     audio: audioShader,
-                    string_slack: Math.max(10, Math.min(20, string.string_width / 5)),
+                    string_slack: Math.max(20, Math.min(10, string.string_width / 5)),
                 })
                 pluckableStrings.push(drawWave);
                 midi_string_map[midi_number] = drawWave;
@@ -740,7 +740,7 @@
             window.midi_paused = true
 
             let speed = 1;
-            let pluck_duration = 0.250;
+            let pluck_duration = 0.350;
 
             let notes_map = {}
             let notes_map_cursors = {}
@@ -788,6 +788,7 @@
                     })
                 })
                 notes.sort((a, b) => a.time - b.time);
+
                 
                 notes.forEach(note => {
                     note.time += 1; // leave time for pluck
@@ -797,6 +798,20 @@
                     }
                     notes_map[note.midi].push(note);
                 })
+
+                for(let note_key in notes_map) {
+                    let prev_note = undefined;
+                    for(let i=0; i<notes_map[note_key].length; i++) {
+                        let note = notes_map[note_key][i];
+                        if(prev_note && note.time - prev_note.time < 0.05) {
+                            notes_map[note_key][i] = undefined;
+                        }
+                        prev_note = note;
+                    }
+                    notes_map[note_key] = notes_map[note_key].filter(n => n);
+                }
+                notes = Object.values(notes_map).flat();
+                notes.sort((a, b) => a.time - b.time);
 
                 window.midi_paused = false;
                 start_time = Date.now();
@@ -832,8 +847,27 @@
                 // draw non-plucking strings first:
                 pluckableStrings.forEach(s => {
                     if(!s.plucking) {
+                        if (!s.playing) s.draw_still();
+                    }
+                });
+                const timeOrderedPluckableStrings = pluckableStrings.filter(s => !s.plucking).sort((a, b) => {
+//let progress = (this.duration - this.time_diff) / this.duration;
+                    // sort by playing strings last, which are then ordered by progress property
+                    if(!a.playing && !b.playing) {
+                        return 0;
+                    }
+                    if(a.playing && !b.playing) {
+                        return 1;
+                    } else if(!a.playing && b.playing) {
+                        return -1;
+                    }
+                    const progress_a = a.duration - a.time_diff;
+                    const progress_b = b.duration - b.time_diff;
+                    return progress_a - progress_b;
+                })
+                timeOrderedPluckableStrings.forEach(s => {
+                    if(!s.plucking) {
                         if (s.playing) s.draw()
-                        else s.draw_still();
                     }
                 });
                 pluckableStrings.forEach(s => {
@@ -863,7 +897,7 @@
                                 //     console.log('skipping playing note', note.time, prev_note.time);
                                 //     return;
                                 // }
-                                const _pluck_duration = time_since_prev_note ? Math.min(pluck_duration, time_since_prev_note / 3) : pluck_duration;
+                                const _pluck_duration = time_since_prev_note ? Math.min(pluck_duration, Math.max(0.05, time_since_prev_note / 6)) : pluck_duration;
 
                                 // let pluck_time = Math.max((plucking_string.prev_note_time || 0) + 50, note.time * one_sec_ms - _pluck_duration);
                                 let pluck_time = Math.max((plucking_string.prev_note_time || 0), note.time - _pluck_duration);
@@ -876,7 +910,7 @@
                                     let progress = _pluck_duration > 0 ? (note_time_current - pluck_time) / _pluck_duration : 0.5;
                                     let velocity = Math.min(0.99, note.velocity ? note.velocity*2 : 1);
                                     let offsetY = plucking_string.string_center.y + Math.min(
-                                        plucking_string.string_slack-1, progress * velocity * plucking_string.string_slack
+                                        plucking_string.string_slack-1, progress * Math.pow(velocity, 1.5) * plucking_string.string_slack
                                     );
                                     plucking_string.set_pluck_offsets(offsetX, offsetY);
                                 }
@@ -1217,6 +1251,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                         snap_to_note: window.snap_to_note,
                         show_presets: false,
                         show_midi_player: true,
+                        midis: [],
                     }
                 }
                 componentDidMount() {
@@ -1232,6 +1267,17 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                             stop_drawing();
                             this.setState({ canvas_mode: CanvasModes.pluck });
                         }
+                    })
+
+                    // load midi list from midis/midis.json
+                    fetch('midis/midis.json').then(r => r.json()).then(midis => {
+                        // midis is object with folder as key
+                        const new_midis = Object.keys(midis).map(folder => {
+                            return midis[folder].map(midi => {
+                                return `${folder}/${midi}`
+                            })
+                        }).flat();
+                        this.setState({ midis: new_midis });
                     })
                 }
 
@@ -1256,21 +1302,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                             this.setState({ selected_midi: midi_file });
                                         }}>
                                             <option value=''>Select MIDI</option>
-                                            ${[
-                                                'bach_air.mid',
-                                                'bach2.mid',
-                                                'fantasie.mid',
-                                                'gymnopedie_1.mid',
-                                                'rach3.mid',
-                                                'sospiro.mid',
-                                                'chopin_polonaise.mid',
-                                                'chopin_vivace.mid',
-                                                'mozart_13.mid',
-                                                'GeneratedMelody.mid',
-                                                'debussy-clair-de-lune.mid',
-                                                'chopin-nocturne-op9-no2.mid',
-                                                'mozart-alla-turca.mid',
-                                            ].map(midi => html`
+                                            ${this.state.midis.map(midi => html`
                                                 <option value=${midi}>${midi}</option>
                                             `)}
                                         </select>

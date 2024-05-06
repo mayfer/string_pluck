@@ -1,5 +1,9 @@
 X_INCREMENT = 5;
 
+const COLOR_PLUCKING = [155, 100, 225];
+const COLOR_PLUCKED = [255, 255, 255];
+const COLOR_IDLE = [30, 30, 30];
+
 function drawRoundedPolygon(ctx,
     x,
     y,
@@ -47,7 +51,7 @@ function drawRoundedPolygon(ctx,
 
     ctx.closePath();
     ctx.shadowBlur = shadowBlur
-    ctx.shadowColor = color
+    ctx.shadowColor = 'black'
     ctx.shadowOffsetX = ctx.shadowOffsetY = 0
     ctx.fillStyle = color
     ctx.fill();
@@ -135,7 +139,7 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
 
     this.draw_still = function () {
         let context = this.context;
-        context.strokeStyle = "rgba(255, 255, 255, 0.1)"
+        context.strokeStyle = `rgba(${COLOR_IDLE[0]}, ${COLOR_IDLE[1]}, ${COLOR_IDLE[2]}, 1.0)`
         context.lineWidth = this.lineWidth;
         context.save();
         context.translate(this.string_center.x, this.string_center.y);
@@ -164,7 +168,17 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
         let progress = (this.duration - this.time_diff) / this.duration;
         let brightness = Math.max(0, Math.min(1, 0.1 + Math.pow(progress, 4)));
         let pluckness = Math.pow(progress, 15) / 3;
-        context.strokeStyle = "rgba(" + Math.floor((1 - pluckness) * 255) + ", " + Math.floor((1 - pluckness) * 255) + ", 255.0, " + brightness + ")"
+
+        const mixing_colors = [[155, 120, 225], [255, 255, 255]];
+        const mixing_amount = Math.max(0, Math.min(1, 0.1 + Math.pow(progress, 16)));
+        const mixing_color = [mixing_colors[0][0] * mixing_amount + mixing_colors[1][0] * (1 - mixing_amount), mixing_colors[0][1] * mixing_amount + mixing_colors[1][1] * (1 - mixing_amount), mixing_colors[0][2] * mixing_amount + mixing_colors[1][2] * (1 - mixing_amount)];
+
+        const red = Math.max(COLOR_IDLE[0], Math.floor((1 - pluckness) * mixing_color[0] * brightness));
+        const green = Math.max(COLOR_IDLE[1], Math.floor((1 - pluckness) * mixing_color[1] * brightness));
+        const blue = Math.max(COLOR_IDLE[2], Math.floor((1 - pluckness) * mixing_color[2] * brightness));
+        const alpha = 1.0;
+
+        context.strokeStyle = `rgba(${red}, ${green}, ${blue}, ${alpha})`
         context.translate(this.string_center.x, this.string_center.y);
         context.rotate(this.angle);
         context.translate(-this.string_center.x, -this.string_center.y);
@@ -284,10 +298,10 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
             drawRoundedPolygon(context,
                 offsetX,
                 offsetY + 10,
-                15, // radius
+                10, // radius
                 0, // rotation
                 50,// cornerPercent
-                10, //shadowBlur,
+                5, //shadowBlur,
                 '#bbb',// color,
                 3 //numberOfCorners
             )
@@ -295,10 +309,10 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
             drawRoundedPolygon(context,
                 offsetX,
                 offsetY - 10,
-                15, // radius
+                10, // radius
                 180, // rotation
                 50,// cornerPercent
-                10, //shadowBlur,
+                5, //shadowBlur,
                 '#bbb',// color,
                 3 //numberOfCorners
             )

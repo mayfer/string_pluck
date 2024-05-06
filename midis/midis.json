@@ -1,0 +1,40 @@
+{
+  "Albinoni": [
+    "Adagio-in-G-Minor.mid"
+  ],
+  "Bach": [
+    "bach-fugue-g-minor-organ.mid",
+    "bach2.mid",
+    "bach_air.mid",
+    "cello suite no 1 in g minor - 1 prelude.mid"
+  ],
+  "Beethoven": [
+    "Moonlight-Sonate-Opus-27-(3rd-Movement).mid"
+  ],
+  "Chopin": [
+    "chopin-nocturne-op9-no2.mid",
+    "chopin_polonaise.mid",
+    "chopin_vivace.mid",
+    "fantasie impromptu.mid"
+  ],
+  "Debussy": [
+    "debussy-clair-de-lune.mid"
+  ],
+  "Erik Satie": [
+    "Gymnopedie-Nr-2.mid",
+    "gymnopedie_1.mid"
+  ],
+  "Liszt": [
+    "sospiro.mid"
+  ],
+  "Mozart": [
+    "mozart-alla-turca.mid",
+    "mozart_13.mid"
+  ],
+  "Rachmaninoff": [
+    "rach3.mid"
+  ],
+  "Scott Joplin": [
+    "The entertainer.mid"
+  ]
+}
