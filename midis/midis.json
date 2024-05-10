@@ -3,13 +3,18 @@
     "Adagio-in-G-Minor.mid"
   ],
   "Bach": [
+    "Sonata no 1 in G minor 1 adagio.mid",
+    "Sonata no 1 in G minor 2 fugue.mid",
+    "Sonata no 1 in G minor 3 siciliano.mid",
+    "Sonata no 1 in G minor 4 presto.mid",
     "bach-fugue-g-minor-organ.mid",
     "bach2.mid",
     "bach_air.mid",
     "cello suite no 1 in g minor - 1 prelude.mid"
   ],
   "Beethoven": [
-    "Moonlight-Sonate-Opus-27-(3rd-Movement).mid"
+    "Moonlight-Sonate-Opus-27-(3rd-Movement).mid",
+    "Moonlight_Sonata.mid"
   ],
   "Chopin": [
     "chopin-nocturne-op9-no2.mid",
@@ -27,14 +32,33 @@
   "Liszt": [
     "sospiro.mid"
   ],
+  "Misc": [
+    "KANSAS.Dust in the wind K.mid",
+    "LED ZEPPELIN.Stairway to heaven K.mid",
+    "METALLICANothingElseMatters.mid",
+    "Tetris - Tetris Main Theme.mid"
+  ],
   "Mozart": [
     "mozart-alla-turca.mid",
     "mozart_13.mid"
+  ],
+  "Pachelbel": [
+    "canon.mid"
   ],
   "Rachmaninoff": [
     "rach3.mid"
   ],
   "Scott Joplin": [
     "The entertainer.mid"
+  ],
+  "Tchaikovsky": [
+    "tchaikovsky_piano_concerto_1_incipit_(c)oguri.mid"
+  ],
+  "Turk": [
+    "Bitola-mix_pa80_bulgar.mid",
+    "deniz & mehtap.mid",
+    "kalbimi kim caliyor, el cordobes (7 dakika).mid",
+    "ozdemir erdogan - ikinci bahar 1.mid",
+    "ozdemir erdogan - keman ogretmeni 1.mid"
   ]
 }

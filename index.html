@@ -283,7 +283,9 @@
             pluck: 'pluck',
             draw: 'draw',
             erase: 'erase',
+            move: 'move',
         }
+        window.CanvasModes = CanvasModes;
         window.canvas_mode = CanvasModes.pluck;
 
         let draw_start = null
@@ -639,8 +641,9 @@
 
             const fill_styles_per_mode = {
                 [CanvasModes.pluck]: "rgba(0, 0, 0, 1.0)",
-                [CanvasModes.draw]: "rgba(0, 50, 0, 0.5)",
-                [CanvasModes.erase]: "rgba(50, 0, 0, 0.5)",
+                [CanvasModes.draw]: "rgba(0, 50, 0, 1.0)",
+                [CanvasModes.erase]: "rgba(50, 0, 0, 1.0)",
+                [CanvasModes.move]: "rgba(0, 0, 50, 1.0)",
             }
             context.fillStyle = "rgba(0, 0, 0, 0.5)";
             context.lineWidth = 2;
@@ -730,6 +733,9 @@
 
             }
 
+            let moving_string;
+            let moving_string_edge;
+            const move_grab_distance = 20;
             canvas_jq.on('mousedown touchstart', (e) => {
                 e.preventDefault();
 
@@ -737,6 +743,28 @@
                     const { offsetX, offsetY } = click_or_touch_coordinates(e);
                     draw_start = { x: offsetX, y: offsetY };
                     draw_end = { x: offsetX, y: offsetY };
+                } else if (window.canvas_mode == CanvasModes.move) {
+                    const { offsetX, offsetY } = click_or_touch_coordinates(e);
+                    draw_start = { x: offsetX, y: offsetY };
+                    draw_end = { x: offsetX, y: offsetY };
+
+                    // if cursor is on a string, set it as moving
+                    for(let string of pluckableStrings) {
+                        const angledOffset = rotate_coordinates_for_string(string, offsetX, offsetY);
+                        if(angledOffset.x > string.string_position.x && angledOffset.x < string.string_position.x + string.string_width && angledOffset.y > string.string_position.y - move_grab_distance && angledOffset.y < string.string_position.y + move_grab_distance) {
+                            moving_string = string;
+                            moving_string.moving = true;
+                            // if cursor is near the ends of the string
+                            if(Math.abs(angledOffset.x - string.string_position.x) < move_grab_distance) {
+                                moving_string_edge = 'left';
+                                console.log('left', angledOffset.x, string.string_position.x)
+                            } else if(Math.abs(angledOffset.x - (string.string_position.x + string.string_width)) < move_grab_distance) {
+                                moving_string_edge = 'right';
+                                console.log('right', angledOffset.x, string.string_position.x + string.string_width)
+                            }
+                            window.hovered_string = string;
+                        }
+                    }
                 }
             })
             canvas_jq.on('mouseup touchend touchcancel', (e) => {
@@ -746,10 +774,19 @@
                         finish_drawing_string();
                     } else if (window.canvas_mode == CanvasModes.erase) {
                         finish_erasing_string();
+                    } else if (window.canvas_mode == CanvasModes.move) {
+                        if(moving_string) {
+                            moving_string.moving = false;
+                            moving_string = undefined;
+                            resetAndAddStrings(canvas_jq, audioShader, pluckableStrings.map(s => { return { string_center: s.string_center, string_width: s.string_width, angle: s.angle, freq: s.freq } }));
+                        }
+                        moving_string = undefined;
+                        moving_string_edge = undefined;
                     }
                     draw_start = null
                     draw_end = null
                 }
+                window.hovered_string = undefined;
             })
             $(document).on('mousemove touchmove', (e) => {
                 if (draw_start) {
@@ -757,6 +794,37 @@
                         const offset = click_or_touch_coordinates(e);
                         draw_end.y = offset.offsetY;
                         draw_end.x = offset.offsetX;
+                    } else if (window.canvas_mode == CanvasModes.move) {
+                        const offset = click_or_touch_coordinates(e);
+                        draw_end.y = offset.offsetY;
+                        draw_end.x = offset.offsetX;
+                        if(moving_string) {
+                            const moved_x = draw_end.x - draw_start.x;
+                            const moved_y = draw_end.y - draw_start.y;
+                            if(moving_string_edge == 'left' || moving_string_edge == 'right') {
+                                // from center of string
+                                const angle_drawend_to_string_center = Math.atan2(draw_end.y - moving_string.string_center.y, draw_end.x - moving_string.string_center.x);
+                                moving_string.angle = angle_drawend_to_string_center;
+                            } else {
+                                moving_string.string_center.x += moved_x;
+                                moving_string.string_center.y += moved_y;
+
+                                moving_string.string_position.x = moving_string.string_center.x - moving_string.string_width / 2;
+                                moving_string.string_position.y = moving_string.string_center.y;
+                            }
+                        }
+                        draw_start.x = draw_end.x;
+                        draw_start.y = draw_end.y;
+                    }
+                    
+                } else if (window.canvas_mode == CanvasModes.move) {
+                    window.hovered_string = undefined;
+                    const offset = click_or_touch_coordinates(e);
+                    for(let string of pluckableStrings) {
+                        const angledOffset = rotate_coordinates_for_string(string, offset.offsetX, offset.offsetY);
+                        if(angledOffset.x > string.string_position.x && angledOffset.x < string.string_position.x + string.string_width && angledOffset.y > string.string_position.y - move_grab_distance && angledOffset.y < string.string_position.y + move_grab_distance) {
+                            window.hovered_string = string;
+                        }   
                     }
                 }
             })
@@ -867,8 +935,8 @@
                 }
                 if (last_frame_time_ms && Date.now() - last_frame_time_ms > 1000) {
                     if(window.midi_paused == false) {
-                        window.midi_paused = true
-                        console.log('pausing due to inactivity?')
+                        // window.midi_paused = true
+                        // console.log('pausing due to inactivity?')
                     }
                 }
 
@@ -948,7 +1016,8 @@
 
                                     const a = 12 / 440; // Scale factor
                                     const b = -6; // Shift to center the sigmoid at the midpoint of 440 and 880
-                                    const high_freq_damping = smoothTransition(plucking_string.freq, 330, 880, 1, 0);
+                                    const high_freq_damping = smoothTransition(plucking_string.freq, 330, 880, 1, 0.5);
+                                    // const low_freq_damping = smoothTransition(plucking_string.freq, 30, 170, 0.5, 1);
                                     // console.log(plucking_string.freq, high_freq_damping);
 
                                     let offsetX = plucking_string.string_center.x + velocity_based_x_offset * high_freq_damping;
@@ -1308,12 +1377,28 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                             this.setState({ canvas_mode: CanvasModes.draw });
                         }
                     })
-                    window.addEventListener('keyup', (e) => {
+                    const exitDrawingIfDrawMode = () => {
                         if (window.canvas_mode == CanvasModes.draw) {
                             finish_drawing_string();
                             stop_drawing();
                             this.setState({ canvas_mode: CanvasModes.pluck });
                         }
+                    }
+                    window.addEventListener('keyup', (e) => {
+                        exitDrawingIfDrawMode();
+                    })
+                    window.addEventListener('visibilitychange', () => {
+                        exitDrawingIfDrawMode();
+                        // resume audio
+                        if(window.audio_context && window.audio_context.state === 'suspended') {
+                            window.audio_context.resume();
+                        }
+                    })
+                    window.addEventListener('blur', () => {
+                        exitDrawingIfDrawMode();
+                    })
+                    window.addEventListener('focus', () => {
+                        exitDrawingIfDrawMode();
                     })
 
                     // load midi list from midis/midis.json
@@ -1403,6 +1488,13 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                             // start_drawing();
                         }}>
                                         🧹 Erase
+                                    </span>
+                                    <span class='choice ${canvas_mode == CanvasModes.move ? 'selected' : ''}' onClick=${() => {
+                                        this.setState({ canvas_mode: CanvasModes.move });
+                                        window.canvas_mode = CanvasModes.move;
+                                        // start_drawing();
+                                    }}>
+                                        ✂️ Move
                                     </span>
                                 </div>
 

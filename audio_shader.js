@@ -92,7 +92,7 @@ function AudioShader(num_strings, num_overtones) {
     for (int i = 0; i < NUM_STRINGS; i++) {
         float ii = float(i);
 
-        float amp = sqrt(2.0 / (pow(ii, 1.7)/2. + 1.0)) / (9.0);
+        float amp = 1.;
         
         if(amp > 0.00001) {
             for(int j = 0; j < NUM_OVERTONES; j++) {
@@ -275,7 +275,7 @@ function AudioShader(num_strings, num_overtones) {
 
     this.updateString = function (message) {
         let { string } = message;
-        let { id, overtones, duration, stopped } = string;
+        let { id, freq, overtones, duration, stopped } = string;
 
         if (this.strings_updated_this_frame[id]) {
             // console.log("values already updated for this frame", id);
@@ -299,7 +299,7 @@ function AudioShader(num_strings, num_overtones) {
                 let start_at = this.blockOffset * buffer_size / this.audioCtx.sampleRate;
                 //let o_freq = s_freq * (j+1);
                 let ofreq = overtones[j].freq;
-                let oamp = overtones[j].amplitude;
+                let oamp = overtones[j].amplitude / (Math.pow(freq, 0.45) * 5); 
                 let prev_amp = this.overtones_texture[(i * num_overtones + j) * 4 + 1];
 
                 this.overtones_texture[(i * num_overtones + j) * 4 + 3] = prev_amp;

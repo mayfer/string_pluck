@@ -22,7 +22,10 @@ async function scanDirectory(dir) {
 
 async function writeMidisJson() {
     const midis = await scanDirectory('.');
-    fs.writeFileSync('midis.json', JSON.stringify(midis, null, 2), 'utf8');
+    // relative to current file's directory
+    const midis_dir = path.dirname(path.resolve(__filename));
+    
+    fs.writeFileSync(path.join(midis_dir, 'midis.json'), JSON.stringify(midis, null, 2), 'utf8');
     console.log('midis.json has been written.');
 }
 

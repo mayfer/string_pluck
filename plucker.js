@@ -3,6 +3,10 @@ X_INCREMENT = 5;
 const COLOR_PLUCKING = [155, 100, 225];
 const COLOR_PLUCKED = [255, 255, 255];
 const COLOR_IDLE = [30, 30, 30];
+const COLOR_DRAW = [150, 185, 150];
+const COLOR_MOVE = [90, 90, 155];
+const COLOR_ERASE = [245, 215, 215];
+const COLOR_HOVER = [255, 255, 255];
 
 function drawRoundedPolygon(ctx,
     x,
@@ -139,12 +143,32 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
 
     this.draw_still = function () {
         let context = this.context;
-        context.strokeStyle = `rgba(${COLOR_IDLE[0]}, ${COLOR_IDLE[1]}, ${COLOR_IDLE[2]}, 1.0)`
-        context.lineWidth = this.lineWidth;
         context.save();
         context.translate(this.string_center.x, this.string_center.y);
         context.rotate(this.angle);
         context.translate(-this.string_center.x, -this.string_center.y);
+        
+        let color_idle = COLOR_IDLE;
+        if(window.canvas_mode == window.CanvasModes.draw) {
+            color_idle = COLOR_DRAW;
+        } else if(window.canvas_mode == window.CanvasModes.move) {
+            color_idle = COLOR_MOVE;
+        } else if(window.canvas_mode == window.CanvasModes.erase) {
+            color_idle = COLOR_ERASE;
+        }
+        context.strokeStyle = `rgba(${color_idle[0]}, ${color_idle[1]}, ${color_idle[2]}, 1.0)`
+        if(window.hovered_string && window.hovered_string.id == this.id) {
+            context.strokeStyle = `rgba(${COLOR_HOVER[0]}, ${COLOR_HOVER[1]}, ${COLOR_HOVER[2]}, 1.0)`
+            // show text
+            context.font = "20px Arial";
+            context.fillStyle = "rgba(255, 255, 255, 1)";
+            context.shadowOffsetX = 0;  // Horizontal shadow displacement
+            context.shadowOffsetY = 0;  // Vertical shadow displacement
+            context.shadowBlur = 3;     // Blur level
+            context.shadowColor = 'black';  // Shadow color
+            context.fillText(this.note_name, this.string_width + this.string_position.x + 10, this.string_position.y + 5);
+        }
+        context.lineWidth = this.lineWidth;
 
 
         context.beginPath();
@@ -178,7 +202,18 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
         const blue = Math.max(COLOR_IDLE[2], Math.floor((1 - pluckness) * mixing_color[2] * brightness));
         const alpha = 1.0;
 
-        context.strokeStyle = `rgba(${red}, ${green}, ${blue}, ${alpha})`
+
+        let color_arr = [red, green, blue];
+        if(window.canvas_mode == window.CanvasModes.pluck) {
+        } else if(window.canvas_mode == window.CanvasModes.draw) {
+            color_arr = COLOR_DRAW;
+        } else if(window.canvas_mode == window.CanvasModes.move) {
+            color_arr = COLOR_MOVE;
+        } else if(window.canvas_mode == window.CanvasModes.erase) {
+            color_arr = COLOR_ERASE;
+        }
+
+        context.strokeStyle = `rgba(${color_arr[0]}, ${color_arr[1]}, ${color_arr[2]}, ${alpha})`
         context.translate(this.string_center.x, this.string_center.y);
         context.rotate(this.angle);
         context.translate(-this.string_center.x, -this.string_center.y);
@@ -394,6 +429,7 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
             this.post_message_to_worklet({
                 string: {
                     id: this.id,
+                    freq: this.freq,
                     overtones: this.overtones.map(o => { return { freq: o.freq, amplitude: Math.abs(o.amplitude) } }),
                     duration: this.duration
                 },
