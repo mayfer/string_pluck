@@ -751,7 +751,7 @@
                     // if cursor is on a string, set it as moving
                     for(let string of pluckableStrings) {
                         const angledOffset = rotate_coordinates_for_string(string, offsetX, offsetY);
-                        if(angledOffset.x > string.string_position.x && angledOffset.x < string.string_position.x + string.string_width && angledOffset.y > string.string_position.y - move_grab_distance && angledOffset.y < string.string_position.y + move_grab_distance) {
+                        if(angledOffset.x > string.string_position.x - move_grab_distance && angledOffset.x < string.string_position.x + string.string_width + move_grab_distance && angledOffset.y > string.string_position.y - move_grab_distance && angledOffset.y < string.string_position.y + move_grab_distance) {
                             moving_string = string;
                             moving_string.moving = true;
                             // if cursor is near the ends of the string
@@ -803,8 +803,8 @@
                             const moved_y = draw_end.y - draw_start.y;
                             if(moving_string_edge == 'left' || moving_string_edge == 'right') {
                                 // from center of string
-                                const angle_drawend_to_string_center = Math.atan2(draw_end.y - moving_string.string_center.y, draw_end.x - moving_string.string_center.x);
-                                moving_string.angle = angle_drawend_to_string_center;
+                                const angle_drawend_to_string_center = Math.atan2(draw_end.y - moving_string.string_center.y, draw_end.x - moving_string.string_center.x)
+                                moving_string.angle = angle_drawend_to_string_center - (moving_string_edge == 'left' ? Math.PI : 0);
                             } else {
                                 moving_string.string_center.x += moved_x;
                                 moving_string.string_center.y += moved_y;

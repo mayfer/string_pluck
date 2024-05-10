@@ -2,7 +2,7 @@ X_INCREMENT = 5;
 
 const COLOR_PLUCKING = [155, 100, 225];
 const COLOR_PLUCKED = [255, 255, 255];
-const COLOR_IDLE = [30, 30, 30];
+const COLOR_IDLE = [40, 40, 40];
 const COLOR_DRAW = [150, 185, 150];
 const COLOR_MOVE = [90, 90, 155];
 const COLOR_ERASE = [245, 215, 215];
