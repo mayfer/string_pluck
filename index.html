@@ -818,13 +818,29 @@
                     }
                     
                 } else if (window.canvas_mode == CanvasModes.move) {
-                    window.hovered_string = undefined;
+                    // window.hovered_string = undefined;
                     const offset = click_or_touch_coordinates(e);
+                    let new_hover = false;
                     for(let string of pluckableStrings) {
                         const angledOffset = rotate_coordinates_for_string(string, offset.offsetX, offset.offsetY);
-                        if(angledOffset.x > string.string_position.x && angledOffset.x < string.string_position.x + string.string_width && angledOffset.y > string.string_position.y - move_grab_distance && angledOffset.y < string.string_position.y + move_grab_distance) {
-                            window.hovered_string = string;
+                        if(angledOffset.x > string.string_position.x - move_grab_distance && angledOffset.x < string.string_position.x + string.string_width + move_grab_distance && angledOffset.y > string.string_position.y - move_grab_distance && angledOffset.y < string.string_position.y + move_grab_distance) {
+                            if(window.hovered_string) {
+                                const hoveredStringAngledOffset = rotate_coordinates_for_string(window.hovered_string, offset.offsetX, offset.offsetY);
+                                const distance1 = Math.abs(hoveredStringAngledOffset.y - window.hovered_string.string_position.y)
+                                const distance2 = Math.abs(angledOffset.y - string.string_position.y)
+                                if(distance1 >= distance2) {
+                                    // dont change hovered string
+                                    window.hovered_string = string;
+                                    new_hover = true;
+                                }
+                            } else {
+                                window.hovered_string = string;
+                                new_hover = true;
+                            }
                         }   
+                    }
+                    if(!new_hover) {
+                        window.hovered_string = undefined;
                     }
                 }
             })
@@ -1494,7 +1510,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                         window.canvas_mode = CanvasModes.move;
                                         // start_drawing();
                                     }}>
-                                        ✂️ Move
+                                        ☛ Move
                                     </span>
                                 </div>
 

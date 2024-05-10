@@ -162,11 +162,15 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
             // show text
             context.font = "20px Arial";
             context.fillStyle = "rgba(255, 255, 255, 1)";
-            context.shadowOffsetX = 0;  // Horizontal shadow displacement
-            context.shadowOffsetY = 0;  // Vertical shadow displacement
-            context.shadowBlur = 3;     // Blur level
-            context.shadowColor = 'black';  // Shadow color
             context.fillText(this.note_name, this.string_width + this.string_position.x + 10, this.string_position.y + 5);
+
+            context.beginPath();
+            // draw small circle dots at ends of string
+            context.arc(this.string_position.x, this.string_position.y, 5, 0, 2 * Math.PI, false);  
+            context.fill();
+            context.beginPath();
+            context.arc(this.string_position.x + this.string_width, this.string_position.y, 5, 0, 2 * Math.PI, false);  
+            context.fill();
         }
         context.lineWidth = this.lineWidth;
 
