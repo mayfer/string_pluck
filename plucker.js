@@ -62,13 +62,14 @@ function drawRoundedPolygon(ctx,
     ctx.restore()
 }
 
-function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height, string_width, string_center, angle, duration, audio, string_slack }) {
+function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height, string_width, string_center, angle, duration, audio, string_slack, screen }) {
     this.audio = audio;
     this.overtones = overtones; // {freq, amplitude}
     this.id = id;
     this.freq = freq;
     this.note_name = Notes.freq_to_note(freq).note;
     this.midi_number = midi_number;
+    this.screen = screen;
 
     this.context = canvas.getContext("2d");
     this.lineWidth = 3;
@@ -162,7 +163,7 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
             // show text
             context.font = "20px Arial";
             context.fillStyle = "rgba(255, 255, 255, 1)";
-            context.fillText(this.note_name, this.string_width + this.string_position.x + 10, this.string_position.y + 5);
+            context.fillText(this.note_name, this.string_width + this.string_position.x + 15, this.string_position.y + 5);
 
             context.beginPath();
             // draw small circle dots at ends of string
@@ -245,12 +246,12 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
 
         // write note name
         context.font = "15px Arial";
-        context.fillStyle = "rgba(255, 255, 255, " + (brightness - 0.1) + ")"
+        context.fillStyle = `rgba(${color_arr[0]}, ${color_arr[1]}, ${color_arr[2]}, ${brightness })`
         context.shadowOffsetX = 0;  // Horizontal shadow displacement
         context.shadowOffsetY = 0;  // Vertical shadow displacement
         context.shadowBlur = 3;     // Blur level
         context.shadowColor = 'black';  // Shadow color
-        context.fillText(this.note_name, this.string_width + this.string_position.x + 10, this.string_position.y + 5);
+        context.fillText(this.note_name, this.string_width + this.string_position.x + 15, this.string_position.y + 5);
 
         context.restore();
     };
@@ -310,7 +311,7 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
         context.shadowBlur = 3;     // Blur level
         context.shadowColor = 'black';  // Shadow color
 
-        context.fillText(this.note_name, this.string_width + this.string_position.x + 10, this.string_position.y + 5);
+        context.fillText(this.note_name, this.string_width + this.string_position.x + 15, this.string_position.y + 5);
 
 
         // context.fillStyle = "#c8b1e3"

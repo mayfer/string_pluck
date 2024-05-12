@@ -87,7 +87,7 @@ function AudioShader(num_strings, num_overtones) {
   vec2 mainSound(float time, vec2 coord) {
     float sum = 0.0;
     float num_strings_f = float(NUM_STRINGS);
-    float num_overtones_f = float(NUM_OVERTONES);
+    // float num_overtones_f = float(NUM_OVERTONES);
 
     for (int i = 0; i < NUM_STRINGS; i++) {
         float ii = float(i);
@@ -240,10 +240,10 @@ function AudioShader(num_strings, num_overtones) {
 
         // node.connect(this.audioCtx.destination);
 
-        const gainNode = this.audioCtx.createGain();
-        gainNode.gain.value = 1;
-        node.connect(gainNode);
-        gainNode.connect(this.audioCtx.destination);
+        // const gainNode = this.audioCtx.createGain();
+        // gainNode.gain.value = 1;
+        // gainNode.connect(this.audioCtx.destination);
+        node.connect(this.audioCtx.destination);
 
         
 
