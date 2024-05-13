@@ -1,12 +1,14 @@
 X_INCREMENT = 5;
 
-const COLOR_PLUCKING = [155, 100, 225];
+const COLOR_PLUCKING = [185, 130, 225];
 const COLOR_PLUCKED = [255, 255, 255];
 const COLOR_IDLE = [40, 40, 40];
 const COLOR_DRAW = [150, 185, 150];
 const COLOR_MOVE = [90, 90, 155];
 const COLOR_ERASE = [245, 215, 215];
 const COLOR_HOVER = [255, 255, 255];
+
+window.NOTE_FONT = "15px Arial";
 
 function drawRoundedPolygon(ctx,
     x,
@@ -161,7 +163,7 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
         if(window.hovered_string && window.hovered_string.id == this.id) {
             context.strokeStyle = `rgba(${COLOR_HOVER[0]}, ${COLOR_HOVER[1]}, ${COLOR_HOVER[2]}, 1.0)`
             // show text
-            context.font = "20px Arial";
+            context.font = NOTE_FONT;
             context.fillStyle = "rgba(255, 255, 255, 1)";
             context.fillText(this.note_name, this.string_width + this.string_position.x + 15, this.string_position.y + 5);
 
@@ -245,11 +247,11 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
         context.stroke();
 
         // write note name
-        context.font = "15px Arial";
+        context.font = NOTE_FONT;
         context.fillStyle = `rgba(${color_arr[0]}, ${color_arr[1]}, ${color_arr[2]}, ${brightness })`
         context.shadowOffsetX = 0;  // Horizontal shadow displacement
         context.shadowOffsetY = 0;  // Vertical shadow displacement
-        context.shadowBlur = 3;     // Blur level
+        context.shadowBlur = 5;     // Blur level
         context.shadowColor = 'black';  // Shadow color
         context.fillText(this.note_name, this.string_width + this.string_position.x + 15, this.string_position.y + 5);
 
@@ -303,7 +305,7 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
         }
 
         // write note name
-        context.font = "15px Arial";
+        context.font = NOTE_FONT
         context.fillStyle = plucking_color;
 
         context.shadowOffsetX = 0;  // Horizontal shadow displacement
@@ -415,7 +417,11 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
         let freqs = this.fourier(points);
 
         for (let wi = 0; wi < this.overtones.length; wi++) {
-            this.overtones[wi].amplitude = (freqs[this.overtones[wi].freq]) / 5
+
+            let low_freq_amp_adjustment = this.freq < 100  ? window.smoothTransition(this.freq, 0, 100, wi/3 + 0.5, 1) : 1;
+            let high_freq_amp_adjustment = this.freq > 1200 ? window.smoothTransition(this.freq, 1200, 2000, 1, 0.5) : 1;
+
+            this.overtones[wi].amplitude = low_freq_amp_adjustment * high_freq_amp_adjustment * (freqs[this.overtones[wi].freq]) / 5
         }
 
         this.start_time = Date.now();

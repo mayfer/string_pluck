@@ -119,11 +119,11 @@
         }
 
         #controls .track-item {
-            padding: 0 10px;
+            padding: 5px 10px;
             background: #fff;
             color: #000;
             cursor: pointer;
-            margin: 5px 10px;
+            margin: 5px;
             line-height: 28px;
             font-size: 16px;
             pointer-events: all;
@@ -138,6 +138,9 @@
             background: rgba(0, 0, 0, 0.3);
             border-radius: 5px;
 
+        }
+        #controls .track-artist h3 {
+            margin: 3px;
         }
 
         #controls .section {
@@ -320,6 +323,14 @@
     <script type="module">
         import { html, render, Component } from "./preact.htm.module.js"
 
+
+        function smoothTransition(x, x_start, x_end, start_value, end_value) {
+            const scaledX = (x - x_start) / (x_end - x_start) * 10 - 5;
+            const sigmoid = 1 / (1 + Math.exp(-scaledX));
+            return start_value + (end_value - start_value) * sigmoid;
+        }
+        window.smoothTransition = smoothTransition;
+            
         const base_freq = Notes.note_to_freq('E2');
 
         const CanvasModes = {
@@ -657,7 +668,7 @@
                     angle: string.angle,
                     duration,
                     audio: window.audioShader,
-                    string_slack: Math.min(25, Math.max(8, 10000/string.freq)),
+                    string_slack: Math.min(30, Math.max(8, 10000/string.freq)),
                     screen: { width, height },
                 })
                 pluckableStrings.push(drawWave);
@@ -669,6 +680,8 @@
             }
 
             pluckableStrings.forEach(s => s.draw_still());
+
+            window.NOTE_FONT = Math.min(15, parseInt(height / pluckableStrings.length)) + "px Arial";
 
             localStorage.setItem('strings', JSON.stringify(strings));
 
@@ -955,21 +968,26 @@
                 let midi_url = URL.createObjectURL(midi_blob);
                 // use tonejs to load the midi file
                 let midi_json = await Midi.fromUrl(midi_url);
+
+                if(!midi_json.name) {
+                    midi_json.name = url
+                }
                 // console.log(midi_json);
                 // set_midi_track(midi_json);
                 return midi_json;
             }
 
-            function smoothTransition(x, x_start, x_end, start_value, end_value) {
-                const scaledX = (x - x_start) / (x_end - x_start) * 10 - 5;
-                const sigmoid = 1 / (1 + Math.exp(-scaledX));
-                return start_value + (end_value - start_value) * sigmoid;
-            }
-
-
             function set_midi_track(new_midi_track) {
+                window.midi_paused = true;
+                start_time = Date.now();
+                note_last_frame_ms = Date.now();
+                note_time_current = 0;
+                
                 // reset all current plucks
-                pluckableStrings.forEach(s => s.reset_pluck_offsets());
+                pluckableStrings.forEach(s => {
+                    s.reset_pluck_offsets()
+                    s.stop_sound()
+                });
 
                 console.log('playing midi track', new_midi_track);
                 if(new_midi_track.header.ticksPerBeat) {
@@ -1016,20 +1034,33 @@
                 notes = Object.values(notes_map).flat();
                 notes.sort((a, b) => a.time - b.time);
 
+                // check if all velocities are the same, and set them to random if so
+                let velocities = notes.map(n => n.velocity);
+                if(velocities.every(v => v === velocities[0])) {
+                    console.log('all notes have same velocity of', velocities[0])
+                    notes.forEach(n => n.velocity =  0.3 + Math.random() * 0.7)   
+                }
+
                 const midi_strings = getMidiNoteStrings(canvas_jq, Object.keys(notes_map)); 
                 // check if every existing string matches the new midi strings
                 if(!midi_strings.every(s => pluckableStrings.some(p => p.string_widthfreq == s.freq))) {
                     resetAndAddStrings(canvas_jq, midi_strings, {skip_audio: false});
                 }
 
-                window.midi_paused = false;
-                start_time = Date.now();
-                note_last_frame_ms = Date.now();
-                note_time_current = 0;
+                if(window.midi_start_timer) {
+                    clearTimeout(window.midi_start_timer);
+                }
+                window.midi_start_timer = setTimeout(() => {
+                    window.midi_paused = false;
+                    start_time = Date.now();
+                    note_last_frame_ms = Date.now();
+                    note_time_current = 0;
 
-                const midi_length_seconds = Math.max(...notes.map(n => n.time));
-                const event = new CustomEvent('midi_loaded', { detail: { midi_length_seconds: midi_length_seconds } });
-                window.dispatchEvent(event);
+                    const midi_length_seconds = Math.max(...notes.map(n => n.time));
+                    const midi_track_name = midi_track.name;
+                    const event = new CustomEvent('midi_loaded', { detail: { midi_length_seconds: midi_length_seconds , midi_track_name: midi_track_name } });
+                    window.dispatchEvent(event);
+                }, 100)
             };
 
             let frame = () => {
@@ -1495,7 +1526,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                         exitDrawingIfDrawMode();
                     })
                     window.addEventListener('midi_loaded', (e) => {
-                        this.setState({ midi_length_seconds: e.detail.midi_length_seconds });
+                        this.setState({ midi_length_seconds: e.detail.midi_length_seconds, midi_track_name: e.detail.midi_track_name });
                     })
 
                     // load midi list from midis/midis.json
@@ -1533,7 +1564,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                         ${this.state.playing ? html`
                                             <div class='midi-progress-bar'>
                                                 <span class='midi-progress-bar-fill' style='width: ${this.state.midi_progress_percentage}%'></span>
-                                                ${' '} ${Math.round(this.state.midi_length_seconds / 60)}:${Math.round(this.state.midi_length_seconds % 60)}
+                                                ${' '}${this.state.midi_track_name} [${Math.round(this.state.midi_length_seconds / 60)}:${Math.round(this.state.midi_length_seconds % 60).toString().padStart(2, '0')}]
                                                 ${' '}
                                             </div>
                                         ` : html``}

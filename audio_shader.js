@@ -41,6 +41,7 @@ function AudioShader(num_strings, num_overtones) {
         return locations;
     }
 
+
     const VERTEX_SHADER =
         `#version 300 es
 
@@ -286,9 +287,11 @@ function AudioShader(num_strings, num_overtones) {
         }
         this.strings_updated_this_frame[id] = true;
         let i = id;
+
+        
         if (stopped) {
             //let amp = stopped ? 0 : 1 / (j+1);2
-
+            
             for (let j = 0; j < num_overtones; j += 1) {
                 let prev_amp = this.overtones_texture[(i * num_overtones + j) * 4 + 1];
                 this.overtones_texture[(i * num_overtones + j) * 4 + 3] = prev_amp;
@@ -299,6 +302,9 @@ function AudioShader(num_strings, num_overtones) {
                 let start_at = this.blockOffset * buffer_size / this.audioCtx.sampleRate;
                 //let o_freq = s_freq * (j+1);
                 let ofreq = overtones[j].freq;
+                // let low_freq_amp_adjustment = freq < 100 && j > 1 && j < 8 ? window.smoothTransition(freq, 0, 100, 10, 1) : 1;
+                // let high_freq_amp_adjustment = freq > 1200 ? window.smoothTransition(freq, 1200, 2000, 1, 0.5) : 1;
+                // console.log({ low_freq_amp_adjustment, high_freq_amp_adjustment })
                 let oamp = overtones[j].amplitude / (Math.pow(freq, 0.45) * 5); 
                 let prev_amp = this.overtones_texture[(i * num_overtones + j) * 4 + 1];
 
