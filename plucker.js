@@ -100,7 +100,7 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
     this.string_height = wave_height;
 
     this.base_freq = overtones[0].freq;
-    this.string_slack = string_slack || 30;
+    this.string_slack = string_slack || Math.min(25, Math.max(8, 10000/this.freq));
 
     this.playing = false;
 
@@ -418,7 +418,7 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
 
         for (let wi = 0; wi < this.overtones.length; wi++) {
 
-            let low_freq_amp_adjustment = this.freq < 100  ? window.smoothTransition(this.freq, 0, 100, wi/3 + 0.5, 1) : 1;
+            let low_freq_amp_adjustment = this.freq < 200  ? window.smoothTransition(this.freq, 0, 200, wi/3 + 0.5, 1) : 1;
             let high_freq_amp_adjustment = this.freq > 1200 ? window.smoothTransition(this.freq, 1200, 2000, 1, 0.5) : 1;
 
             this.overtones[wi].amplitude = low_freq_amp_adjustment * high_freq_amp_adjustment * (freqs[this.overtones[wi].freq]) / 5

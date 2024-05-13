@@ -111,12 +111,9 @@ function AudioShader(num_strings, num_overtones) {
                 if(ttime > 0.0 && ttime < duration) {
                     float damp = (1./((jj/3.)+1.)) * overtone_amp * amp * pow(1.0 - (ttime/duration), 4.0 * (jj+1.0));
 
-                    // if(damp > 0.00001) {
-                        // to avoid beat patterns
-                        float phase = 6.28318530718 * ii / num_strings_f;
-                        // float phase = 0.0;
-                        sum += sine(ofreq, ttime + phase) * damp;
-                    // }
+                    // to avoid beat patterns
+                    float phase = 6.28318530718 * ii / num_strings_f;
+                    sum += sine(ofreq, ttime + phase) * damp;
                 }
             }
         }

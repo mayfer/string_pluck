@@ -100,6 +100,18 @@
             padding: 10px;
         }
 
+        #controls .spacer {
+            display: inline-block;
+            width: 30px;
+        }
+
+        #controls .strings-menu {
+            background: rgba(0, 0, 0, 0.7);
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
         #controls .item {
             padding: 0 10px;
             background: #fff;
@@ -132,15 +144,23 @@
             display: inline-block;
         }
 
+        #controls .pick-midi-track {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            grid-gap: 10px; 
+        }
         #controls .track-artist {
             padding: 5px;
             margin: 5px;
             background: rgba(0, 0, 0, 0.3);
             border-radius: 5px;
+            
+
 
         }
         #controls .track-artist h3 {
             margin: 3px;
+            color: #ffb;
         }
 
         #controls .section {
@@ -156,7 +176,7 @@
         }
 
         #controls .item.inactive {
-            opacity: 0.2;
+            opacity: 0;
             pointer-events: none;
         }
 
@@ -176,7 +196,10 @@
         #controls .item.toggle {
             background: #333;
             color: #fff;
-            padding: 5px;
+            font-size: 25px;
+            min-width: 40px;
+            line-height: 40px;
+            padding: 4px;
         }
 
         #controls .item.toggle .choice {
@@ -188,7 +211,7 @@
             background: #ffffff11;
             border-radius: 5px;
             transition: all 0.2s ease-in-out;
-            line-height: 30px;
+            font-size: 20px;
         }
 
         #controls .item.toggle .choice:hover {
@@ -273,9 +296,6 @@
 
         #midi-player {
             color: #aaa;
-            height: 100%;
-            overflow-y: auto;
-            pointer-events: all;
         }
 
         .main-menu-modal {
@@ -291,13 +311,14 @@
             -webkit-backdrop-filter: blur(10px);
             padding: 20px;
 
+            pointer-events: all;
 
             overflow-y: auto;
         }
 
         @media only screen and (max-width: 800px) {
             #controls {
-                zoom: 0.6;
+                /* zoom: 0.6; */
             }
 
             #controls .controls-inner {
@@ -668,7 +689,7 @@
                     angle: string.angle,
                     duration,
                     audio: window.audioShader,
-                    string_slack: Math.min(30, Math.max(8, 10000/string.freq)),
+                    string_slack: Math.min(25, Math.max(8, 10000/string.freq)),
                     screen: { width, height },
                 })
                 pluckableStrings.push(drawWave);
@@ -969,9 +990,9 @@
                 // use tonejs to load the midi file
                 let midi_json = await Midi.fromUrl(midi_url);
 
-                if(!midi_json.name) {
-                    midi_json.name = url
-                }
+
+                midi_json.name = url.replace('./midis/', '').replace('.mid', '').replace('/', ': ');
+
                 // console.log(midi_json);
                 // set_midi_track(midi_json);
                 return midi_json;
@@ -982,7 +1003,7 @@
                 start_time = Date.now();
                 note_last_frame_ms = Date.now();
                 note_time_current = 0;
-                
+
                 // reset all current plucks
                 pluckableStrings.forEach(s => {
                     s.reset_pluck_offsets()
@@ -1514,10 +1535,15 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                     window.addEventListener('keyup', (e) => {
                         exitDrawingIfDrawMode();
                     })
-                    window.addEventListener('visibilitychange', () => {
+                    window.addEventListener('visibilitychange', (e) => {
                         exitDrawingIfDrawMode();
                         // resume audio
                         if(window.audioShader) window.audioShader.resume();
+
+                        if(e.visibilityState == 'hidden') {
+                            window.midi_paused = true;
+                            this.setState({ playing: false });
+                        }
                     })
                     window.addEventListener('blur', () => {
                         exitDrawingIfDrawMode();
@@ -1559,7 +1585,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
 
                     return html`
                             <div class='controls-top-right'>
-                                ${this.state.show_midi_player ? html`
+                                ${this.state.playing ? html`
                                     <div class='section' id='midi-player'>
                                         ${this.state.playing ? html`
                                             <div class='midi-progress-bar'>
@@ -1568,6 +1594,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                                 ${' '}
                                             </div>
                                         ` : html``}
+                                        <span class='spacer'></span>
                                         <input type='range' class='speed-slider' min='0' max='100' value='${this.state.speed}' oninput=${(e) => {
                                             // cast 0:100 to 0.1:10
                                             const val = (e.target.value < 50) ? (0.5 + e.target.value/100) : (e.target.value-50) / 100 + 1;
@@ -1575,6 +1602,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                             speed = val;
                                         }} />
                                         ${(speed).toFixed(2)}x speed
+                                        <span class='spacer'></span>
                                         <div class='item' onClick=${async () => {
                                             if(!this.state.playing) {
                                                 const midi_file = this.state.selected_midi;
@@ -1592,14 +1620,24 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                         </div>
                                     </div>
                                 ` : html``}
-                                <div class='item' onClick=${() => {
-                                    this.setState({ show_midi_player: !this.state.show_midi_player });
-                                }}>
-                                    ${this.state.show_midi_player ? 'Hide' : '🎵 MIDI Player'}
-                                </div>
+                                <!--
+                                    <div class='item' onClick=${() => {
+                                        this.setState({ show_midi_player: !this.state.show_midi_player });
+                                    }}>
+                                        ${this.state.show_midi_player ? 'Hide' : '🎵 MIDI Player'}
+                                    </div>
+                                -->
                             </div>
                             <div class='controls-bottom-left'>
                                 <div class='item toggle ${show_modes ? '' : ''}' onClick=${() => {
+                                        if(show_modes && this.state.canvas_mode != CanvasModes.pluck) {
+                                            // enter pluck mode
+                                            if(this.state.canvas_mode == CanvasModes.draw) {
+                                                stop_drawing();
+                                            }
+                                            this.setState({ canvas_mode: CanvasModes.pluck });
+                                            window.canvas_mode = CanvasModes.pluck;
+                                        }
                                         this.setState({ show_modes: !show_modes });
                                     }}>
                                         ${show_modes ? `ⓧ` : `✏️`}
@@ -1658,6 +1696,40 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
 
                             ${show_main_menu ? html`
                                 <div class='main-menu-modal'>
+                                    
+                                    <div class='strings-menu'>
+                                        <div class='item' onClick=${() => {
+                                            const name = prompt('Save preset as');
+                                            // convert name to slug
+                                            const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '').replace(/^-/, '');
+                                            // save to localstorage
+                                            const preset_slugs = JSON.parse(localStorage.getItem('preset_slugs')) || [];
+                                            if (preset_slugs.includes(slug)) {
+                                                const overwrite = confirm('Overwrite existing preset?');
+                                                if (!overwrite) {
+                                                    return;
+                                                }
+                                            }
+                                            preset_slugs.push(slug);
+                                            const screen = { width, height };
+                                            console.log('screen', screen);
+                                            localStorage.setItem('preset_slugs', JSON.stringify(preset_slugs));
+                                            localStorage.setItem('preset:' + slug, JSON.stringify({ name, slug, strings: pluckableStrings.map(s => { return { string_center: s.string_center, freq: s.freq, string_width: s.string_width, angle: s.angle, screen } }) }));
+                                        }}>
+                                            Save current strings
+                                        </div>
+                                        <div class='item' onClick=${() => {
+                                            this.setState({ show_presets: !this.state.show_presets });
+                                        }}>
+                                            Load string preset
+                                        </div>
+                                        <div class='item' onClick=${() => {
+                                            resetAndAddStrings(canvas_jq, []);
+                                        }}>
+                                            Clear
+                                        </div>
+                                    </div>
+
                                     <div class='pick-midi-track' id='midi-player'>
                                         ${Object.keys(grouped_midis).sort().map(folder => html`
                                             <div class='track-artist'>
@@ -1674,38 +1746,6 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                                 `)}
                                             </div>
                                         `)}
-                                    </div>
-                                    
-
-                                    <div class='item' onClick=${() => {
-                                        const name = prompt('Save preset as');
-                                        // convert name to slug
-                                        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '').replace(/^-/, '');
-                                        // save to localstorage
-                                        const preset_slugs = JSON.parse(localStorage.getItem('preset_slugs')) || [];
-                                        if (preset_slugs.includes(slug)) {
-                                            const overwrite = confirm('Overwrite existing preset?');
-                                            if (!overwrite) {
-                                                return;
-                                            }
-                                        }
-                                        preset_slugs.push(slug);
-                                        const screen = { width, height };
-                                        console.log('screen', screen);
-                                        localStorage.setItem('preset_slugs', JSON.stringify(preset_slugs));
-                                        localStorage.setItem('preset:' + slug, JSON.stringify({ name, slug, strings: pluckableStrings.map(s => { return { string_center: s.string_center, freq: s.freq, string_width: s.string_width, angle: s.angle, screen } }) }));
-                                    }}>
-                                        Save
-                                    </div>
-                                    <div class='item' onClick=${() => {
-                                        this.setState({ show_presets: !this.state.show_presets });
-                                    }}>
-                                        Load
-                                    </div>
-                                    <div class='item' onClick=${() => {
-                                        resetAndAddStrings(canvas_jq, []);
-                                    }}>
-                                        Clear
                                     </div>
                                 </div>
                             ` : html``}
