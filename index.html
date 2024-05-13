@@ -199,6 +199,7 @@
             font-size: 25px;
             min-width: 40px;
             line-height: 40px;
+            margin: 5px;
             padding: 4px;
         }
 
@@ -292,7 +293,37 @@
             border: 1px solid #fff;
             background: #000;
             border-radius: 5px;
+            height: 20px;
         }
+        .speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+        }
+        .speed-slider::-moz-range-thumb {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+        }
+        .speed-slider::-ms-thumb {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+        }
+        .speed-reset:hover {
+            cursor: pointer;
+            color: #fff;
+            text-decoration: line-through;
+        }
+
 
         #midi-player {
             color: #aaa;
@@ -1091,8 +1122,8 @@
                 }
                 if (last_frame_time_ms && Date.now() - last_frame_time_ms > 1000) {
                     if(window.midi_paused == false) {
-                        // window.midi_paused = true
-                        // console.log('pausing due to inactivity?')
+                        window.midi_paused = true
+                        console.log('pausing due to inactivity?')
                     }
                 }
 
@@ -1520,10 +1551,10 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                 }
                 componentDidMount() {
                     window.addEventListener('keydown', (e) => {
-                        if (e.shiftKey) {
-                            start_drawing();
-                            this.setState({ canvas_mode: CanvasModes.draw });
-                        }
+                        // if (e.shiftKey) {
+                        //     start_drawing();
+                        //     this.setState({ canvas_mode: CanvasModes.draw });
+                        // }
                     })
                     const exitDrawingIfDrawMode = () => {
                         if (window.canvas_mode == CanvasModes.draw) {
@@ -1533,7 +1564,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                         }
                     }
                     window.addEventListener('keyup', (e) => {
-                        exitDrawingIfDrawMode();
+                        // exitDrawingIfDrawMode();
                     })
                     window.addEventListener('visibilitychange', (e) => {
                         exitDrawingIfDrawMode();
@@ -1597,11 +1628,14 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                         <span class='spacer'></span>
                                         <input type='range' class='speed-slider' min='0' max='100' value='${this.state.speed}' oninput=${(e) => {
                                             // cast 0:100 to 0.1:10
-                                            const val = (e.target.value < 50) ? (0.5 + e.target.value/100) : (e.target.value-50) / 100 + 1;
+                                            const val = (e.target.value < 50) ? (0.5 + e.target.value/100) : 2*(e.target.value-50) / 100 + 1;
                                             this.setState({ speed: e.target.value});
                                             speed = val;
                                         }} />
-                                        ${(speed).toFixed(2)}x speed
+                                        <span class='speed-reset' onClick=${e => {
+                                            this.setState({speed: 50})
+                                            speed = 1;
+                                        }}>${(speed).toFixed(2)}x speed</span>
                                         <span class='spacer'></span>
                                         <div class='item' onClick=${async () => {
                                             if(!this.state.playing) {
