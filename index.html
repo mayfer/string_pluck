@@ -89,6 +89,18 @@
             align-items: center;
             padding: 10px;
         }
+
+        #controls .controls-top-left {
+            position: absolute;
+            top: 0;
+            left: 0;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+        }
         #controls .controls-top-right {
             position: absolute;
             top: 0;
@@ -358,6 +370,33 @@
             pointer-events: all;
 
             overflow-y: auto;
+        }
+
+        .info-panel {
+            position: fixed;
+            font-size: 20px;
+            z-index: 100;
+            top: 70px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 20px;
+
+            pointer-events: all;
+
+            overflow-y: auto;
+        }
+        .info-panel .info-inner {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .info-panel ul li, .info-panel ol li {
+            margin-bottom: 5px;
         }
 
         .main-menu-modal h2 {
@@ -927,7 +966,7 @@
             var context = canvas.getContext("2d");
 
             const fill_styles_per_mode = {
-                [CanvasModes.pluck]: "rgba(0, 0, 0, 1.0)",
+                [CanvasModes.pluck]: "rgba(0, 0, 0, 0.3)",
                 [CanvasModes.draw]: "rgba(0, 50, 0, 1.0)",
                 [CanvasModes.erase]: "rgba(50, 0, 0, 1.0)",
                 [CanvasModes.move]: "rgba(0, 0, 50, 1.0)",
@@ -1781,7 +1820,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                     const touch_device = 'ontouchstart' in document.documentElement;
                     const preset_slugs = JSON.parse(localStorage.getItem('preset_slugs')) || [];
                     const presets = preset_slugs.map(slug => JSON.parse(localStorage.getItem('preset:' + slug)));
-                    const { canvas_mode, show_modes, show_main_menu } = this.state;
+                    const { canvas_mode, show_modes, show_main_menu, show_info } = this.state;
 
                     const grouped_midis = this.state.midis.reduce((acc, cur) => {
                         const folder = cur.split('/')[0];
@@ -1840,6 +1879,57 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                     </div>
                                 -->
                             </div>
+
+                            <div class='controls-top-left'>
+                                <${DivCustomClick} class='item toggle ${show_info ? '' : ''}' onClick=${() => {
+                                        
+                                        this.setState({ show_info: !show_info });
+                                    }}>
+                                        ${show_modes ? `ⓧ` : `❓`}
+                                </${DivCustomClick}>
+
+                                ${show_info ? html`
+                                    <div class='info-panel'>
+                                        <div class='info-inner'>
+                                            <h1>Pluck</h1>
+                                            <h3>by Murat</h3>
+                                            <p>This is a math-based string simulator. </p>
+                                            <p>Both the audio and visuals are generated using the same math, rendered at different speeds so the eye can see. No tricks or audio files are used: everything is calculated from raw sine waves.</p>
+                                            <ul>
+                                                <li>The vibrations are modeled based on how far down the string you pluck from.  </li>
+                                                <li>The simulation is very compute intensive. 44,100 samples per second * 100 strings * 12 overtones = 52,920,000 calculations per second. This is calculated on the GPU in parallel using WebGL.</li>
+                                                <li>The velocity of midi notes are mapped to both pluck position, as well as pluck strength. </li>
+                                            </ul>
+                                            <p>
+                                                This YouTube video of a slow motion string pluck proves that our simulated result is very close to reality.
+                                                <br />
+                                                <iframe width="350" height="180" style="margin: 10px;" src="https://www.youtube.com/embed/LNNQvG0jWtw?si=DZa9TS3TdcURpwbF" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                                            </p>
+                                            <p>
+                                                This project is the fruit of a long-running obsession with the mathematics of timbre. <a href='http://tonehack.com'>Tonehack.com</a> was the first product I released on the topic, where I wanted to prove to myself that very simple theory could simulate a wide range of instruments.
+                                            </p>
+                                            <p>
+                                                The next step was to simulate a pluck such that the pluck position (i.e. plucking the middle vs the end of the string). If you ever tinkered with a guitar, you might have noticed plucks sound different when done at the very end of the string. To my surprise, <a href='https://twitter.com/mayfer/status/1481203022956941321'>my first hypothesis was correct</a>. It was as simple as taking the fourier transform of the plucked string (imagine the triangular shape created by pulling the string before release, and representing it as a sum of sine waves).
+                                            </p>
+                                            <p>
+                                                I'm skipping over the details, but a lot of effort went into polish & I'm very pleased with the final feel.
+                                            </p>
+                                            <p>
+                                                There are several directions I can take this project from here:
+                                                <ol>
+                                                    <li>Turn it into an interactive educational tool to teach physics of sound & music. </li>
+                                                    <li>Turn it into a music learning tool for kids where songs are pre-made as chords that the user can pluck to learn rhythm and feel. </li>
+                                                    <li>Turn it into an interactive art installation</li> 
+                                                </ol>
+                                                If you are interested in any of the above, please get in touch at <a href='mailto:murat@ayfer.net'>murat@ayfer.net</a>.
+                                            </p>
+                                        </div>
+
+                                    </div>
+                                ` : html``}
+                            </div>
+
+                            
                             <div class='controls-bottom-left'>
                                 <${DivCustomClick} class='item toggle ${show_modes ? '' : ''}' onClick=${() => {
                                         if(show_modes && this.state.canvas_mode != CanvasModes.pluck) {
@@ -1854,6 +1944,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                     }}>
                                         ${show_modes ? `ⓧ` : `✏️`}
                                 </${DivCustomClick}>
+
                                 ${show_modes ? html`
                                     <div class='draw-mode-button item toggle'>
                                         <span class='choice ${canvas_mode == CanvasModes.pluck ? 'selected' : ''}' onClick=${() => {
