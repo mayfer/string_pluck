@@ -1257,7 +1257,7 @@
                 if (window.idle) {
                     return;
                 }
-                if (last_frame_time_ms && Date.now() - last_frame_time_ms > 1000) {
+                if (last_frame_time_ms && Date.now() - last_frame_time_ms > 5000) {
                     if(window.midi_paused == false) {
                         window.midi_paused = true
                         console.log('pausing due to inactivity?')
