@@ -201,8 +201,9 @@ function pluckableString({ id, canvas, freq, midi_number, overtones, wave_height
         let pluckness = Math.pow(progress, 15) / 3;
 
         const mixing_colors = [[155, 120, 225], [255, 255, 255]];
-        const mixing_amount = Math.max(0, Math.min(1, 0.1 + Math.pow(progress, 16)));
-        const mixing_color = [mixing_colors[0][0] * mixing_amount + mixing_colors[1][0] * (1 - mixing_amount), mixing_colors[0][1] * mixing_amount + mixing_colors[1][1] * (1 - mixing_amount), mixing_colors[0][2] * mixing_amount + mixing_colors[1][2] * (1 - mixing_amount)];
+        const mixing_amount = Math.max(0, Math.min(1, 0.1 + Math.pow(progress, 12)));
+        // const mixing_color = [mixing_colors[0][0] * mixing_amount + mixing_colors[1][0] * (1 - mixing_amount), mixing_colors[0][1] * mixing_amount + mixing_colors[1][1] * (1 - mixing_amount), mixing_colors[0][2] * mixing_amount + mixing_colors[1][2] * (1 - mixing_amount)];
+        const mixing_color = mixing_colors[1];
 
         const red = Math.max(COLOR_IDLE[0], Math.floor((1 - pluckness) * mixing_color[0] * brightness));
         const green = Math.max(COLOR_IDLE[1], Math.floor((1 - pluckness) * mixing_color[1] * brightness));

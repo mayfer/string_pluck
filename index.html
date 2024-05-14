@@ -20,17 +20,18 @@
     <script type='text/javascript' src='audio_shader.js?1'></script>
     <script type='text/javascript' src='plucker.js?1'></script>
     <script type='text/javascript' src='tonejs_midi.js?1'></script>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, user-scalable=no">
     <style>
         html,
         body {
             margin: 0;
             padding: 0;
             background: black;
-            font-family: sans-serif;
+            font-family: "San Francisco", "Helvetica Neue", "Helvetica", "Arial", sans-serif;
             overflow: hidden;
             width: 100%;
             height: 100%;
+            touch-action: manipulation;
         }
 
         .info {
@@ -105,11 +106,21 @@
             width: 30px;
         }
 
+
         #controls .strings-menu {
-            background: rgba(0, 0, 0, 0.7);
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 5px;
+            margin: 15px 0 5px 0;
+            text-align: center;
+        }
+
+        #controls .strings-menu .item {
+            font-size: 20px;
+            line-height: 35px;
+            margin: 0 10px 0 0;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 255, 255, 1.0);
+        }
+        #controls .strings-menu .item:hover {
+            background: rgba(255, 255, 255, 1.0);
         }
 
         #controls .item {
@@ -132,21 +143,25 @@
 
         #controls .track-item {
             padding: 5px 10px;
-            background: #fff;
+            background: rgba(255, 255, 255, 0.6);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
             color: #000;
+            text-shadow: 0 0px 10px rgba(255, 255, 255, 1), 0 0px 7px rgba(255, 255, 255, 1);
             cursor: pointer;
-            margin: 5px;
+            margin: 2px;
             line-height: 28px;
             font-size: 16px;
             pointer-events: all;
             border-radius: 5px;
-            text-align: center;
             display: inline-block;
+        }
+        #controls .track-item:hover {
+            background: rgba(255, 255, 255, 0.8);
         }
 
         #controls .pick-midi-track {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
             grid-gap: 10px; 
         }
         #controls .track-artist {
@@ -154,13 +169,15 @@
             margin: 5px;
             background: rgba(0, 0, 0, 0.3);
             border-radius: 5px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
             
 
 
         }
         #controls .track-artist h3 {
-            margin: 3px;
-            color: #ffb;
+            margin: 5px;
+            color: #fffacd;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
         }
 
         #controls .section {
@@ -232,30 +249,26 @@
         #controls .item.toggle .choice:active {}
 
         #presets {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            bottom: 20px;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.5);
+            margin: 5px;
             color: #fff;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
             pointer-events: all;
+            border-radius: 5px;
+            padding: 10px;
         }
 
-        #presets .preset {
-            width: 300px;
-            padding: 20px;
-            background: #eee;
-            color: #000;
-            cursor: pointer;
-            margin: 10px;
-            pointer-events: all;
-            transition: all 0.2s ease-in-out;
+        .presets-list {
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-gap: 3px;
+            display: grid;
+
+        }
+
+        #presets .track-item {
+            background: rgba(255, 255, 255, 0.8);
+        }
+        #presets .track-item:hover {
+            background: rgba(255, 255, 255, 1.0);
         }
 
         #presets .preset:hover {
@@ -345,6 +358,13 @@
             pointer-events: all;
 
             overflow-y: auto;
+        }
+
+        .main-menu-modal h2 {
+            color: #fff;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+            margin: 10px 0;
+            padding: 0;
         }
 
         @media only screen and (max-width: 800px) {
@@ -479,15 +499,15 @@
         }
 
         const getTwoFullOctaveStrings = (canvas_jq) => {
-            let num_strings = 60;
+            let num_strings = 24;
             let initial_strings = [];
             let width = canvas_jq.width();
             let height = canvas_jq.height();
-            for (var i = 0; i < num_strings; i++) {
+            for (var i = 0; i < num_strings; i ++) {
                 initial_strings.push({
                     string_center: { x: canvas_jq.width() / 2, y: 100 + (i + 1) * ((height - 200) / num_strings) },
-                    string_width: Notes.relative_note(width_base_freq * 2, -(i)),
-                    freq: width_base_freq * 2 / Math.pow(2, i / 12),
+                    string_width: Notes.relative_note(width_base_freq , -(i)),
+                    freq: width_base_freq  / Math.pow(2, i / 12),
                     angle: 0, // i * Math.PI / 64
                 });
             }
@@ -533,6 +553,120 @@
 
             return initial_strings;
         }
+        
+        const getCanonChordStrings = (canvas_jq) => {
+
+            let width = canvas_jq.width();
+            let height = canvas_jq.height();
+            const midi_notes = [
+                // D major
+                50,
+                57,
+                62,
+                66,
+                74,
+
+                0,
+                // A major
+                45,
+                57,
+                61,
+                64,
+                69,
+
+                0,
+                // B minor
+                47,
+                59,
+                62,
+                66,
+                71,
+
+                0,
+                // F# minor
+                42,
+                54,
+                58,
+                61,
+                66,
+
+                0,
+                // G major
+                43,
+                55,
+                59,
+                62,
+                67,
+
+                0,
+                // D major
+                50,
+                57,
+                62,
+                66,
+                74,
+
+                0,
+                // G major
+                43,
+                55,
+                59,
+                62,
+                67,
+
+                0,
+                // A major
+                45,
+                57,
+                61,
+                64,
+                69,
+
+                0,
+            ]
+            const initial_strings = [];
+
+            const num_chords = midi_notes.filter(n => n == 0).length + 1;
+            const chunksize = 6;
+            const max_vertical = (height - 200) / 50;
+            const columns = 3
+            const rows = 3
+
+            let note_i = 0;
+            for (var i = 0; i < columns; i++) {
+                for (var j = 0; j < rows; j++) {
+                    const x = 100 + i * (width - 200) / columns;
+                    const y = 100 + j * (height - 200) / rows;
+                    const w = (width - 200) / columns;
+                    const h = (height - 200) / rows;
+
+                    console.log(x, y, w, h);
+
+                    for (var k = 0; k < chunksize; k++) {
+                        const midi_number = midi_notes[note_i];
+                        note_i++;
+                        if (midi_number == 0) continue;
+
+                        const center = (width / columns / 4) * (i / columns) + x + w / 2;
+                        const top = (height / rows / 4) * (j / rows) + y + h / 2 + (k - chunksize / 2) * h / chunksize;
+
+                        const note_offset = midi_number - midi_number_a1;
+                        initial_strings.push({
+                            string_center: { x: center, y: top },
+                            //string_width: Notes.relative_note(width_base_freq, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
+                            string_width: Notes.relative_note(width_base_freq * 2, -note_offset),
+                            freq: getFreqFromMidiNumber(midi_number),
+                            angle: 0, // i * Math.PI / 64
+                            midi_number,
+                        });
+                    }
+                }
+            }
+
+            return initial_strings;
+        }
+
+        
 
         const getChordStrings = (canvas_jq) => {
 
@@ -637,13 +771,13 @@
             let width = canvas_jq.width();
             let height = canvas_jq.height();
             const initial_strings = [];
-            const start_y = 100;
+            const start_y = height / 15;
             for(var i=0; i<filled_in_midi_numbers.length; i++) {
                 const midi_number = filled_in_midi_numbers[i];
                 if (midi_number == 0) continue;
 
                 const center = width / 2;
-                const top = start_y + (i + 1) * ((height - 200) / filled_in_midi_numbers.length);
+                const top = start_y + (i + 1) * ((height - start_y*2) / filled_in_midi_numbers.length);
 
                 const note_offset = midi_number - midi_number_a1;
                 initial_strings.push({
@@ -734,6 +868,8 @@
             pluckableStrings.forEach(s => s.draw_still());
 
             window.NOTE_FONT = Math.min(15, parseInt(height / pluckableStrings.length)) + "px Arial";
+
+            window.dispatchEvent(new CustomEvent('strings_loaded', { detail: { strings: pluckableStrings } }));
 
             localStorage.setItem('strings', JSON.stringify(strings));
 
@@ -1087,9 +1223,10 @@
                 notes.sort((a, b) => a.time - b.time);
 
                 // check if all velocities are the same, and set them to random if so
-                let velocities = notes.map(n => n.velocity);
-                if(velocities.every(v => v === velocities[0])) {
-                    console.log('all notes have same velocity of', velocities[0])
+                let velocities_obj = {};
+                notes.map(n => velocities_obj[n.velocity.toString()] = n.velocity);
+                if(Object.keys(velocities_obj).length < 3) {
+                    console.log('most notes have same velocity of', velocities_obj)
                     notes.forEach(n => n.velocity =  0.3 + Math.random() * 0.7)   
                 }
 
@@ -1534,6 +1671,44 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
 </g>
 </svg>`
 
+            function hashStringToRGBA(str) {
+                // Hash function to convert string to a numerical value
+                let hash = 0;
+                for (let i = 0; i < str.length; i++) {
+                    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+                }
+
+                // Generate RGBA values
+                const r = (hash >> 24) & 0xFF;
+                const g = (hash >> 16) & 0xFF;
+                const b = (hash >> 8) & 0xFF;
+                const a = 0.3;
+
+                return `rgba(${r}, ${g}, ${b}, ${a})`;
+            }
+
+
+            const DivCustomClick = (props) => {
+                const { onClick, ...rest } = props;
+
+                const handleMouseDown = (event) => {
+                    if (onClick) onClick(event);
+                    event.preventDefault();
+                };
+
+                const handleTouchStart = (event) => {
+                    if (onClick) onClick(event);
+                    event.preventDefault();
+                };
+
+                return html`
+                    <div
+                        ...${rest}
+                        onMouseDown=${handleMouseDown}
+                        onTouchStart=${handleTouchStart}
+                    />
+                `;
+            };
 
             class Controls extends Component {
                 constructor() {
@@ -1584,6 +1759,9 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                     })
                     window.addEventListener('midi_loaded', (e) => {
                         this.setState({ midi_length_seconds: e.detail.midi_length_seconds, midi_track_name: e.detail.midi_track_name });
+                    })
+                    window.addEventListener('strings_loaded', (e) => {
+                        this.setState({ show_main_menu: false });
                     })
 
                     // load midi list from midis/midis.json
@@ -1663,7 +1841,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                 -->
                             </div>
                             <div class='controls-bottom-left'>
-                                <div class='item toggle ${show_modes ? '' : ''}' onClick=${() => {
+                                <${DivCustomClick} class='item toggle ${show_modes ? '' : ''}' onClick=${() => {
                                         if(show_modes && this.state.canvas_mode != CanvasModes.pluck) {
                                             // enter pluck mode
                                             if(this.state.canvas_mode == CanvasModes.draw) {
@@ -1675,7 +1853,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                         this.setState({ show_modes: !show_modes });
                                     }}>
                                         ${show_modes ? `ⓧ` : `✏️`}
-                                </div>
+                                </${DivCustomClick}>
                                 ${show_modes ? html`
                                     <div class='draw-mode-button item toggle'>
                                         <span class='choice ${canvas_mode == CanvasModes.pluck ? 'selected' : ''}' onClick=${() => {
@@ -1720,112 +1898,115 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                 <div class='gap'></div>
 
 
-                                <div class='item toggle ${show_main_menu ? '' : ''}' onClick=${() => {
+                                <${DivCustomClick} class='item toggle ${show_main_menu ? '' : ''}' onClick=${() => {
                                         this.setState({ show_main_menu: !show_main_menu });
                                     }}>
                                         ${show_main_menu ? `ⓧ` : `☰`}
-                                </div>
+                                </${DivCustomClick}>
 
                             </div>
 
                             ${show_main_menu ? html`
                                 <div class='main-menu-modal'>
-                                    
-                                    <div class='strings-menu'>
-                                        <div class='item' onClick=${() => {
-                                            const name = prompt('Save preset as');
-                                            // convert name to slug
-                                            const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '').replace(/^-/, '');
-                                            // save to localstorage
-                                            const preset_slugs = JSON.parse(localStorage.getItem('preset_slugs')) || [];
-                                            if (preset_slugs.includes(slug)) {
-                                                const overwrite = confirm('Overwrite existing preset?');
-                                                if (!overwrite) {
-                                                    return;
-                                                }
-                                            }
-                                            preset_slugs.push(slug);
-                                            const screen = { width, height };
-                                            console.log('screen', screen);
-                                            localStorage.setItem('preset_slugs', JSON.stringify(preset_slugs));
-                                            localStorage.setItem('preset:' + slug, JSON.stringify({ name, slug, strings: pluckableStrings.map(s => { return { string_center: s.string_center, freq: s.freq, string_width: s.string_width, angle: s.angle, screen } }) }));
-                                        }}>
-                                            Save current strings
-                                        </div>
-                                        <div class='item' onClick=${() => {
-                                            this.setState({ show_presets: !this.state.show_presets });
-                                        }}>
-                                            Load string preset
-                                        </div>
-                                        <div class='item' onClick=${() => {
-                                            resetAndAddStrings(canvas_jq, []);
-                                        }}>
-                                            Clear
-                                        </div>
-                                    </div>
 
-                                    <div class='pick-midi-track' id='midi-player'>
-                                        ${Object.keys(grouped_midis).sort().map(folder => html`
-                                            <div class='track-artist'>
-                                                <h3>${folder}</h3>
-                                                ${grouped_midis[folder].map(midi => html`
-                                                    <div class='track-item' onClick=${async e => {
-                                                        const midi_file = midi;
-                                                        this.setState({ selected_midi: midi_file, show_main_menu: false });
-
-                                                        const midi_json = await set_remote_midi_track("./midis/" + midi_file);
-                                                        set_midi_track(midi_json);
-                                                        this.setState({ playing: true });
-                                                    }}>${midi.split('/').pop()}</div>
-                                                `)}
+                                    <h2>String presets</h2>
+                                    <div id='presets'>
+                                        <div class='presets-list'>
+                                            <div class='track-item' onClick=${() => {
+                                                resetAndAddStrings(canvas_jq, getSpiralingStrings(canvas_jq));
+                                            }}>
+                                                <div class='preset-name'>Spiral</div>
                                             </div>
-                                        `)}
-                                    </div>
-                                </div>
-                            ` : html``}
-                            
-                            ${this.state.show_presets ? html`
-                                <div id='presets'>
-                                    <div class='close' onClick=${() => {
-                                this.setState({ show_presets: false });
-                            }}>X</div>
-                                    <div class='preset' onClick=${() => {
-                                this.setState({ show_presets: false });
-                                resetAndAddStrings(canvas_jq, getSpiralingStrings(canvas_jq));
-                            }}>
-                                        <div class='preset-name'>Spiral</div>
-                                        <div class='preset-description'>A spiral of strings</div>
-                                    </div>
-                                    <div class='preset' onClick=${() => {
-                                this.setState({ show_presets: false });
-                                resetAndAddStrings(canvas_jq, get72strings(canvas_jq));
-                            }}>
-                                        <div class='preset-name'>72 strings</div>
-                                        <div class='preset-description'>A lot of strings</div>
-                                    </div>
-                                    <div class='preset' onClick=${() => {
-                                this.setState({ show_presets: false });
-                                resetAndAddStrings(canvas_jq, getTwoFullOctaveStrings(canvas_jq));
-                            }}>
-                                        <div class='preset-name'>2 octaves</div>
-                                        <div class='preset-description'>Two octaves of strings</div>
-                                    </div>
-                                    <div class='preset' onClick=${() => {
-                                this.setState({ show_presets: false });
-                                resetAndAddStrings(canvas_jq, getChordStrings(canvas_jq));
-                            }}>
-                                        <div class='preset-name'>Chords</div>
-                                        <div class='preset-description'>C, G, Am, F chords</div>
-                                    </div>
-                                    ${presets.map(preset => html`
-                                        <div class='preset' onClick=${() => {
-                                    this.setState({ show_presets: false });
-                                    resetAndAddStrings(canvas_jq, preset.strings);
-                                }}>
-                                            <div class='preset-name'>${preset.name}</div>
-                                            <div class='preset-description'>${preset.strings.length} strings</div>
+
+                                            <div class='track-item' onClick=${() => {
+                                                resetAndAddStrings(canvas_jq, get72strings(canvas_jq));
+                                            }}>
+                                                <div class='preset-name'>72 strings</div>
+                                            </div>
+
+                                            <div class='track-item' onClick=${() => {
+                                                resetAndAddStrings(canvas_jq, getTwoFullOctaveStrings(canvas_jq));
+                                            }}>
+                                                <div class='preset-name'>2 octaves</div>
+                                            </div>
+
+                                            <div class='track-item' onClick=${() => {
+                                                resetAndAddStrings(canvas_jq, getChordStrings(canvas_jq));
+                                            }}>
+                                                <div class='preset-name'>C, G, Am, F chords</div>
+                                            </div>
+
+                                            <div class='track-item' onClick=${() => {
+                                                resetAndAddStrings(canvas_jq, getCanonChordStrings(canvas_jq));
+                                            }}>
+                                                <div class='preset-name'>Some other chords</div>
+                                            </div>
+
+                                            ${presets.map(preset => html`
+                                                <div class='track-item' onClick=${() => {
+                                                    resetAndAddStrings(canvas_jq, preset.strings);
+                                                }}>
+                                                    <div class='preset-name'>${preset.name}</div>
+                                                </div>
+                                            `)}
                                         </div>
-                                    `)}
+
+                                        <div class='strings-menu'>
+                                            <div class='item' onClick=${() => {
+                                                const name = prompt('Save preset as');
+                                                // convert name to slug
+                                                const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '').replace(/^-/, '');
+                                                // save to localstorage
+                                                const preset_slugs = JSON.parse(localStorage.getItem('preset_slugs')) || [];
+                                                if (preset_slugs.includes(slug)) {
+                                                    const overwrite = confirm('Overwrite existing preset?');
+                                                    if (!overwrite) {
+                                                        return;
+                                                    }
+                                                }
+                                                preset_slugs.push(slug);
+                                                const screen = { width, height };
+                                                console.log('screen', screen);
+                                                localStorage.setItem('preset_slugs', JSON.stringify(preset_slugs));
+                                                localStorage.setItem('preset:' + slug, JSON.stringify({ name, slug, strings: pluckableStrings.map(s => { return { string_center: s.string_center, freq: s.freq, string_width: s.string_width, angle: s.angle, screen } }) }));
+
+                                                this.setState({ trigger_rerender: Date.now() });
+                                            }}>
+                                                💾 Save current strings
+                                            </div>
+                                            <div class='item' onClick=${() => {
+                                                resetAndAddStrings(canvas_jq, []);
+                                            }}>
+                                                🧹 Clear all strings
+                                            </div>
+                                            <div></div>
+                                        </div>
+                                    </div>
+
+                                    <h2>MIDI tracks</h2>
+                                    <div class='pick-midi-track' id='midi-player'>
+                                        ${Object.keys(grouped_midis).sort().map(folder => {
+                                            // use folder title to seed random color
+                                            const color = hashStringToRGBA("salt" + folder);
+                                            return html`
+                                                <div class='track-artist' style='background: ${color}'>
+                                                    <h3>${folder}</h3>
+                                                    ${grouped_midis[folder].map(midi => html`
+                                                        <div>
+                                                        <div class='track-item' onClick=${async e => {
+                                                            const midi_file = midi;
+                                                            this.setState({ selected_midi: midi_file, show_main_menu: false });
+
+                                                            const midi_json = await set_remote_midi_track("./midis/" + midi_file);
+                                                            set_midi_track(midi_json);
+                                                            this.setState({ playing: true });
+                                                        }}>${midi.split('/').pop().replace(/\.mid$/, '')}</div>
+                                                        </div>
+                                                    `)}
+                                                </div>
+                                            `
+                                        })}
+                                    </div>
                                 </div>
                             ` : html``}
                         `

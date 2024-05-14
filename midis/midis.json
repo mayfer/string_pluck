@@ -1,79 +1,85 @@
 {
   "Albinoni": [
-    "Adagio-in-G-Minor.mid"
+    "Adagio in G Minor.mid"
   ],
   "Bach": [
     "Air BWV 1068.mid",
-    "Cello suite no 1 in g minor - 1 prelude.mid",
-    "Fugue G minor.mid",
-    "Invention bwv 775.mid",
-    "Invention-in-A-Minor-Nr-13-(Bwv-784).mid",
-    "Toccatta and Fugue bwv565.mid"
+    "Cello Suites no. 1 BWV 1007.mid",
+    "Fugue BWV 578.mid",
+    "Invention BWV 775.mid",
+    "Prelude & Fugue BWV 894.mid",
+    "Toccatta & Fugue BWV 565.mid"
   ],
   "Beatles": [],
   "Beethoven": [
-    "Moonlight-Sonate-Opus-27-(3rd-Movement).mid",
-    "Moonlight_Sonata.mid"
+    "5th Symphony pt. 1.mid",
+    "Moonlight Sonata (3rd movement).mid",
+    "Moonlight Sonata.mid"
   ],
   "Charlie Brown": [
-    "LinusAndLucy.mid",
-    "christmastime_is_here.mid"
+    "Christmastime is Here.mid",
+    "Linus & Lucy.mid"
   ],
   "Chopin": [
-    "chopin-nocturne-op9-no2.mid",
-    "chopin_polonaise.mid",
-    "chopin_vivace.mid",
-    "fantasie impromptu.mid"
+    "Fantasie Impromptu.mid",
+    "Nocturne Op. 9 No. 2.mid",
+    "Polonaise Op. 53.mid",
+    "Vivace.mid"
   ],
   "Debussy": [
-    "debussy-clair-de-lune.mid",
-    "debussy-doctor-gradus-ad-parnassum.mid"
+    "Clair de Lune.mid",
+    "Doctor Gradus ad Parnassum.mid"
+  ],
+  "Edvard Grieg": [
+    "Suite No. 1, Morning Mood.mid"
   ],
   "Erik Satie": [
-    "Gymnopedie No.3.mid",
-    "Gymnopedie-Nr-2.mid",
-    "gymnopedie_1.mid"
+    "Gymnopedie No. 1.mid",
+    "Gymnopedie No. 2.mid",
+    "Gymnopedie No. 3.mid"
   ],
   "Isaac Albeniz": [
-    "asturias.mid"
+    "Asturias.mid"
   ],
   "Liszt": [
-    "Hungarian-Rhapsody-Nr-2.mid",
-    "La-Campanella.mid",
-    "sospiro.mid"
+    "Hungarian Rhapsody No. 2.mid",
+    "La Campanella.mid",
+    "Sospiro.mid"
   ],
   "Misc": [
-    "KANSAS.Dust in the wind K.mid",
-    "LED ZEPPELIN.Stairway to heaven K.mid",
-    "Tetris - Tetris Main Theme.mid"
+    "Kansas - Dust in the Wind.mid",
+    "Led Zeppelin - Stairway to Heaven.mid",
+    "Puff the Magic Dragon.mid",
+    "Tetris theme (Korobeiniki).mid"
   ],
   "Monkey Island": [],
   "Mozart": [
-    "mozart-alla-turca.mid",
-    "mozart_13.mid"
+    "Alla Turca.mid",
+    "Eine Kleine Nachtmusik No. 2.mid",
+    "Piano Sonata No. 13.mid"
   ],
   "Pachelbel": [
-    "canon.mid"
+    "Canon in D.mid"
   ],
   "Rachmaninoff": [
-    "rach3.mid"
+    "Piano Conerto No. 3.mid"
   ],
   "Schubert": [],
   "Scott Joplin": [
-    "The entertainer.mid"
+    "The Entertainer.mid"
   ],
   "Tchaikovsky": [
-    "tchaikovsky_piano_concerto_1_incipit_(c)oguri.mid"
+    "Piano Concerto No. 1.mid"
   ],
   "Turk": [],
-  "Undertale MIDI": [
-    "* Undertale - Determination.mid",
-    "* Undertale - For the Fans.mid",
-    "* Undertale - Its Raining Somewhere Else.mid",
-    "* Undertale - Menu Full.mid",
-    "* Undertale - Oh One True Love.mid",
-    "* Undertale - Reunited.mid",
-    "* Undertale - Spear of Justice.mid",
-    "* Undertale - Undertale.mid"
+  "Undertale OST": [
+    "Determination.mid",
+    "For the Fans.mid",
+    "Its Raining Somewhere Else.mid",
+    "Menu Full.mid",
+    "Oh One True Love.mid",
+    "Reunited.mid",
+    "Spear of Justice.mid",
+    "Undertale.mid"
   ]
 }
