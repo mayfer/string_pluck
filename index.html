@@ -893,7 +893,7 @@
                     angle: string.angle,
                     duration,
                     audio: window.audioShader,
-                    string_slack: Math.min(25, Math.max(8, 10000/string.freq)),
+                    string_slack: Math.min(25   , Math.max(8, 10000/string.freq)),
                     screen: { width, height },
                 })
                 pluckableStrings.push(drawWave);
@@ -966,12 +966,12 @@
             var context = canvas.getContext("2d");
 
             const fill_styles_per_mode = {
-                [CanvasModes.pluck]: "rgba(0, 0, 0, 0.3)",
+                [CanvasModes.pluck]: "rgba(0, 0, 0, 1.0)",
                 [CanvasModes.draw]: "rgba(0, 50, 0, 1.0)",
                 [CanvasModes.erase]: "rgba(50, 0, 0, 1.0)",
                 [CanvasModes.move]: "rgba(0, 0, 50, 1.0)",
             }
-            context.fillStyle = "rgba(0, 0, 0, 0.5)";
+            context.fillStyle = "rgba(0, 0, 0, 1.0)";
             context.lineWidth = 2;
             context.strokeStyle = "#fff";
 
@@ -1897,7 +1897,6 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                             <p>Both the audio and visuals are generated using the same math, rendered at different speeds so the eye can see. No tricks or audio files are used: everything is calculated from raw sine waves.</p>
                                             <ul>
                                                 <li>The vibrations are modeled based on how far down the string you pluck from.  </li>
-                                                <li>The simulation is very compute intensive. 44,100 samples per second * 100 strings * 12 overtones = 52,920,000 calculations per second. This is calculated on the GPU in parallel using WebGL.</li>
                                                 <li>The velocity of midi notes are mapped to both pluck position, as well as pluck strength. </li>
                                             </ul>
                                             <p>
@@ -1906,13 +1905,14 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                                 <iframe width="350" height="180" style="margin: 10px;" src="https://www.youtube.com/embed/LNNQvG0jWtw?si=DZa9TS3TdcURpwbF" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
                                             </p>
                                             <p>
-                                                This project is the fruit of a long-running obsession with the mathematics of timbre. <a href='http://tonehack.com'>Tonehack.com</a> was the first product I released on the topic, where I wanted to prove to myself that very simple theory could simulate a wide range of instruments.
-                                            </p>
-                                            <p>
-                                                The next step was to simulate a pluck such that the pluck position (i.e. plucking the middle vs the end of the string). If you ever tinkered with a guitar, you might have noticed plucks sound different when done at the very end of the string. To my surprise, <a href='https://twitter.com/mayfer/status/1481203022956941321'>my first hypothesis was correct</a>. It was as simple as taking the fourier transform of the plucked string (imagine the triangular shape created by pulling the string before release, and representing it as a sum of sine waves).
-                                            </p>
-                                            <p>
-                                                I'm skipping over the details, but a lot of effort went into polish & I'm very pleased with the final feel.
+                                                Technical details:
+                                                <ul>
+                                                    <li>Each string is simulated with 12 overtones (integer multiples of the note frequency) </li>
+                                                    <li>To calculate amplitude of each overtone, we take the Fourier transform of the plucked string at the time the pick is released </li>
+                                                    <li>Higher frequency overtones decay faster than lower frequency overtones </li>
+                                                    <li>72 strings ⅹ 12 overtones ⅹ 44,100 samples per second = 52,920,000 calculations per second </li>
+                                                    <li>Audio buffer of 1024 samples are sent to the GPU to compute in parallel on each tick</li>
+                                                </ul>
                                             </p>
                                             <p>
                                                 There are several directions I can take this project from here:
@@ -1920,8 +1920,9 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                                     <li>Turn it into an interactive educational tool to teach physics of sound & music. </li>
                                                     <li>Turn it into a music learning tool for kids where songs are pre-made as chords that the user can pluck to learn rhythm and feel. </li>
                                                     <li>Turn it into an interactive art installation</li> 
+                                                    <li>Turn it into a game where i.e. a bouncing ball plucks the strings & you try to place strings to match a melody idk</li>
                                                 </ol>
-                                                If you are interested in any of the above, please get in touch at <a href='mailto:murat@ayfer.net'>murat@ayfer.net</a>.
+                                                If you are interested in any of the above, please get in touch at <a href='mailto:murat@ayfer.net'>murat@ayfer.net</a> or <a href='https://twitter.com/mayfer'>@mayfer</a>.
                                             </p>
                                         </div>
 
