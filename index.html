@@ -1286,6 +1286,7 @@
 
                     const midi_length_seconds = Math.max(...notes.map(n => n.time));
                     const midi_track_name = midi_track.name;
+                    window.midi_paused = false;
                     const event = new CustomEvent('midi_loaded', { detail: { midi_length_seconds: midi_length_seconds , midi_track_name: midi_track_name } });
                     window.dispatchEvent(event);
                 }, 100)
