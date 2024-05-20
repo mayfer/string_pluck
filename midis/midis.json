@@ -6,7 +6,6 @@
     "Air BWV 1068.mid",
     "Cello Suites no. 1 BWV 1007.mid",
     "Fugue BWV 578.mid",
-    "Invention BWV 775.mid",
     "Prelude & Fugue BWV 894.mid",
     "Toccatta & Fugue BWV 565.mid"
   ],
@@ -46,12 +45,6 @@
     "La Campanella.mid",
     "Sospiro.mid"
   ],
-  "Misc": [
-    "Kansas - Dust in the Wind.mid",
-    "Led Zeppelin - Stairway to Heaven.mid",
-    "Puff the Magic Dragon.mid",
-    "Tetris theme (Korobeiniki).mid"
-  ],
   "Monkey Island": [],
   "Mozart": [
     "Alla Turca.mid",
@@ -62,7 +55,7 @@
     "Canon in D.mid"
   ],
   "Rachmaninoff": [
-    "Piano Conerto No. 3.mid"
+    "Piano Concerto No. 3.mid"
   ],
   "Schubert": [],
   "Scott Joplin": [
@@ -81,5 +74,11 @@
     "Reunited.mid",
     "Spear of Justice.mid",
     "Undertale.mid"
+  ],
+  "misc": [
+    "Kansas - Dust in the Wind.mid",
+    "Led Zeppelin - Stairway to Heaven.mid",
+    "Puff the Magic Dragon.mid",
+    "Tetris theme (Korobeiniki).mid"
   ]
 }

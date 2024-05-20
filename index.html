@@ -83,11 +83,13 @@
             left: 0;
             width: 100%;
             box-sizing: border-box;
+            padding: 10px;
+        }
+        #controls .controls-bottom-left-flex {
             display: flex;
             flex-direction: row;
             justify-content: center;
             align-items: center;
-            padding: 10px;
         }
 
         #controls .controls-top-left {
@@ -120,19 +122,19 @@
 
 
         #controls .strings-menu {
-            margin: 15px 0 5px 0;
-            text-align: center;
+            margin: 0;
+            padding: 0;
         }
 
         #controls .strings-menu .item {
             font-size: 20px;
-            line-height: 35px;
-            margin: 0 10px 0 0;
-            background: rgba(255, 255, 255, 0.6);
-            border: 1px solid rgba(255, 255, 255, 1.0);
+            line-height: 40px;
+            margin: 5px;
+            color: #666;
+            background: rgba(255, 255, 255, 0.1);
         }
         #controls .strings-menu .item:hover {
-            background: rgba(255, 255, 255, 1.0);
+            color: #fff;
         }
 
         #controls .item {
@@ -155,10 +157,10 @@
 
         #controls .track-item {
             padding: 5px 10px;
-            background: rgba(255, 255, 255, 0.6);
+            /* background: rgba(255, 255, 255, 0.7); */
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-            color: #000;
-            text-shadow: 0 0px 10px rgba(255, 255, 255, 1), 0 0px 7px rgba(255, 255, 255, 1);
+            color: #fff;
+            text-shadow: 0 0px 10px rgba(255, 255, 255, 1), 0 0px 1px rgba(0, 0, 0, 0.5);
             cursor: pointer;
             margin: 2px;
             line-height: 28px;
@@ -166,14 +168,28 @@
             pointer-events: all;
             border-radius: 5px;
             display: inline-block;
+            position: relative;
+        }
+        #controls .track-item.featured:before {
+            content: '⭐️ ';
+            position: absolute;
+            left: -15px;
+            top: 5px;
+            text-shadow: 0 0 2px black;
+        }
+        #controls .track-item.featured {
+            /* background: linear-gradient(100deg, white, lightgrey); */
+            border: 1px solid rgb(255, 255, 255, 0.3);
+            margin: 1px;
+            font-weight: bold;
         }
         #controls .track-item:hover {
-            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 0px 2px rgba(255, 255, 255, 1);
         }
 
         #controls .pick-midi-track {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             grid-gap: 10px; 
         }
         #controls .track-artist {
@@ -189,6 +205,8 @@
         #controls .track-artist h3 {
             margin: 5px;
             color: #fffacd;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
         }
 
@@ -270,17 +288,21 @@
         }
 
         .presets-list {
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
             grid-gap: 3px;
             display: grid;
 
         }
+        .presets-list .track-item.user-preset {
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
 
         #presets .track-item {
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.1);
+            text-shadow: 0 0px 2px rgba(0, 0, 0, 0); 
         }
         #presets .track-item:hover {
-            background: rgba(255, 255, 255, 1.0);
+            background: rgba(255, 255, 255, 0.15);
         }
 
         #presets .preset:hover {
@@ -592,83 +614,36 @@
 
             return initial_strings;
         }
-        
-        const getCanonChordStrings = (canvas_jq) => {
 
+        const getAndalusianCadence = (canvas_jq) => {
             let width = canvas_jq.width();
             let height = canvas_jq.height();
             const midi_notes = [
-                // D major
-                50,
-                57,
-                62,
-                66,
-                74,
-
+                // A minor (Am): A3 (57), E4 (64), A4 (69), C4 (60)
+                57, 64, 69, 60,
                 0,
-                // A major
-                45,
-                57,
-                61,
-                64,
-                69,
-
+                // G Major (G): G3 (55), D4 (62), G4 (67), B3 (59)
+                55, 62, 67, 59,
                 0,
-                // B minor
-                47,
-                59,
-                62,
-                66,
-                71,
-
+                // F Major (F): F3 (53), C4 (60), F4 (65), A3 (57)
+                53, 60, 65, 57,
                 0,
-                // F# minor
-                42,
-                54,
-                58,
-                61,
-                66,
-
+                // E Major (E): E3 (52), B3 (59), E4 (64), G#3 (56)
+                52, 59, 64, 56,
                 0,
-                // G major
-                43,
-                55,
-                59,
-                62,
-                67,
-
+                // D minor (Dm): D3 (50), A3 (57), D4 (62), F4 (65)
+                50, 57, 62, 65,
                 0,
-                // D major
-                50,
-                57,
-                62,
-                66,
-                74,
+                // E Major (E): E3 (52), B3 (59), E4 (64), G#3 (56)
+                52, 59, 64, 56
+            ];
 
-                0,
-                // G major
-                43,
-                55,
-                59,
-                62,
-                67,
-
-                0,
-                // A major
-                45,
-                57,
-                61,
-                64,
-                69,
-
-                0,
-            ]
             const initial_strings = [];
 
             const num_chords = midi_notes.filter(n => n == 0).length + 1;
-            const chunksize = 6;
+            const chunksize = 5;
             const max_vertical = (height - 200) / 50;
-            const columns = 3
+            const columns = 2
             const rows = 3
 
             let note_i = 0;
@@ -678,6 +653,81 @@
                     const y = 100 + j * (height - 200) / rows;
                     const w = (width - 200) / columns;
                     const h = (height - 200) / rows;
+
+                    console.log(x, y, w, h);
+
+                    for (var k = 0; k < chunksize; k++) {
+                        const midi_number = midi_notes[note_i];
+                        note_i++;
+                        if (midi_number == 0) continue;
+
+                        const center = (width / columns / 4) * (i / columns) + x + w / 2;
+                        const top = (height / rows / 4) * (j / rows) + y + h / 2 + (k - chunksize / 2) * h / chunksize;
+
+                        const note_offset = midi_number - midi_number_a1;
+                        initial_strings.push({
+                            string_center: { x: center, y: top },
+                            //string_width: Notes.relative_note(width_base_freq, -(i % 24 + 12*Math.floor(i/24))) * 1.2 ,
+                            string_width: Notes.relative_note(width_base_freq * 2, -note_offset),
+                            freq: getFreqFromMidiNumber(midi_number),
+                            angle: 0, // i * Math.PI / 64
+                            midi_number,
+                        });
+                    }
+                }
+            }
+
+            return initial_strings;
+        }
+
+        
+        const getCanonChordStrings = (canvas_jq) => {
+
+            let width = canvas_jq.width();
+            let height = canvas_jq.height();
+            const midi_notes = [
+                // D Major (D): D4 (62), A4 (69), D5 (74), F#4 (66)
+                62, 69, 74, 66,
+                0,
+                // A Major (A): A3 (57), E4 (64), A4 (69), C#4 (61)
+                57, 64, 69, 61,
+                0,
+                // B minor (Bm): B3 (59), F#4 (66), B4 (71), D4 (62)
+                59, 66, 71, 62,
+                0,
+                // F# minor (F#m): F#3 (54), C#4 (61), F#4 (66), A3 (57)
+                54, 61, 66, 57,
+                0,
+                // G Major (G): G3 (55), D4 (62), G4 (67), B3 (59)
+                55, 62, 67, 59,
+                0,
+                // D Major (D): D3 (50), A3 (57), D4 (62), F#3 (54)
+                50, 57, 62, 54,
+                0,
+                // G Major (G): G3 (55), D4 (62), G4 (67), B3 (59)
+                55, 62, 67, 59,
+                0,
+                // A Major (A): A3 (57), E4 (64), A4 (69), C#4 (61)
+                57, 64, 69, 61
+            ];
+            const initial_strings = [];
+
+            const num_chords = midi_notes.filter(n => n == 0).length + 1;
+            const chunksize = 5;
+            const max_vertical = (height - 200) / 50;
+            const columns = 3
+            const rows = 3
+
+
+            const start_y = height / 15;
+
+            let note_i = 0;
+            for (var i = 0; i < columns; i++) {
+                for (var j = 0; j < rows; j++) {
+                    const x = start_y + i * (width - start_y*2) / columns;
+                    const y = start_y + j * (height - start_y*2) / rows;
+                    const w = (width - start_y*2) / columns;
+                    const h = (height - start_y*2) / rows;
 
                     console.log(x, y, w, h);
 
@@ -1297,7 +1347,8 @@
                 if (window.idle) {
                     return;
                 }
-                if (last_frame_time_ms && Date.now() - last_frame_time_ms > 5000) {
+                if (last_frame_time_ms && Date.now() - last_frame_time_ms > 3000) {
+                    note_last_frame_ms = last_frame_time_ms;
                     if(window.midi_paused == false) {
                         window.midi_paused = true
                         console.log('pausing due to inactivity?')
@@ -1933,70 +1984,105 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
 
                             
                             <div class='controls-bottom-left'>
-                                <${DivCustomClick} class='item toggle ${show_modes ? '' : ''}' onClick=${() => {
-                                        if(show_modes && this.state.canvas_mode != CanvasModes.pluck) {
-                                            // enter pluck mode
-                                            if(this.state.canvas_mode == CanvasModes.draw) {
-                                                stop_drawing();
-                                            }
-                                            this.setState({ canvas_mode: CanvasModes.pluck });
-                                            window.canvas_mode = CanvasModes.pluck;
-                                        }
-                                        this.setState({ show_modes: !show_modes });
-                                    }}>
-                                        ${show_modes ? `ⓧ` : `✏️`}
-                                </${DivCustomClick}>
 
                                 ${show_modes ? html`
-                                    <div class='draw-mode-button item toggle'>
-                                        <span class='choice ${canvas_mode == CanvasModes.pluck ? 'selected' : ''}' onClick=${() => {
-                                this.setState({ canvas_mode: CanvasModes.pluck });
-                                window.canvas_mode = CanvasModes.pluck;
-                                stop_drawing();
-                            }}>
-                                            ${pick_svg} Pluck
-                                        </span>
-                                        <span class='choice ${canvas_mode == CanvasModes.draw ? 'selected' : ''}' onClick=${() => {
-                                this.setState({ canvas_mode: CanvasModes.draw });
-                                window.canvas_mode = CanvasModes.draw;
-                                start_drawing();
-                            }}>
-                                            ✏️ Draw
-                                        </span>
-                                        <span class='choice ${canvas_mode == CanvasModes.erase ? 'selected' : ''}' onClick=${() => {
-                                this.setState({ canvas_mode: CanvasModes.erase });
-                                window.canvas_mode = CanvasModes.erase;
-                                // start_drawing();
-                            }}>
-                                            🧹 Erase
-                                        </span>
-                                        <span class='choice ${canvas_mode == CanvasModes.move ? 'selected' : ''}' onClick=${() => {
-                                            this.setState({ canvas_mode: CanvasModes.move });
-                                            window.canvas_mode = CanvasModes.move;
-                                            // start_drawing();
+                                    <div class='strings-menu'>
+                                        <div class='item' onClick=${() => {
+                                            resetAndAddStrings(canvas_jq, []);
                                         }}>
-                                            ☛ Move
-                                        </span>
+                                            🧹 Clear all
+                                        </div>
+                                        <br />
+                                        <div class='item' onClick=${() => {
+                                            const name = prompt('Save preset as');
+                                            // convert name to slug
+                                            const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '').replace(/^-/, '');
+                                            // save to localstorage
+                                            const preset_slugs = JSON.parse(localStorage.getItem('preset_slugs')) || [];
+                                            if (preset_slugs.includes(slug)) {
+                                                const overwrite = confirm('Overwrite existing preset?');
+                                                if (!overwrite) {
+                                                    return;
+                                                }
+                                            }
+                                            preset_slugs.push(slug);
+                                            const screen = { width, height };
+                                            console.log('screen', screen);
+                                            localStorage.setItem('preset_slugs', JSON.stringify(preset_slugs));
+                                            localStorage.setItem('preset:' + slug, JSON.stringify({ name, slug, strings: pluckableStrings.map(s => { return { string_center: s.string_center, freq: s.freq, string_width: s.string_width, angle: s.angle, screen } }) }));
+
+                                            this.setState({ trigger_rerender: Date.now() });
+                                        }}>
+                                            💾 Save
+                                        </div>
                                     </div>
+                                ` : html``}
+                                      
+                                <div class='controls-bottom-left-flex'>
+                                    <${DivCustomClick} class='item toggle ${show_modes ? '' : ''}' onClick=${() => {
+                                            if(show_modes && this.state.canvas_mode != CanvasModes.pluck) {
+                                                // enter pluck mode
+                                                if(this.state.canvas_mode == CanvasModes.draw) {
+                                                    stop_drawing();
+                                                }
+                                                this.setState({ canvas_mode: CanvasModes.pluck });
+                                                window.canvas_mode = CanvasModes.pluck;
+                                            }
+                                            this.setState({ show_modes: !show_modes });
+                                        }}>
+                                            ${show_modes ? `ⓧ` : `✏️`}
+                                    </${DivCustomClick}>
 
-                                    <div class='item toggle ${canvas_mode == CanvasModes.draw ? '' : 'inactive'}' onClick=${() => {
-                                    this.setState({ snap_to_note: !this.state.snap_to_note });
-                                    window.snap_to_note = !this.state.snap_to_note;
-                                    }}>
-                                        <span class='choice ${this.state.snap_to_note ? 'selected' : ''}'>Snap to note</span>
-                                        <span class='choice ${this.state.snap_to_note ? '' : 'selected'}'>Precise</span>
-                                    </div>
-                                ` : html`
-                                `}
-                                <div class='gap'></div>
+                                    ${show_modes ? html`
+                                        <div class='draw-mode-button item toggle'>
+                                            <span class='choice ${canvas_mode == CanvasModes.pluck ? 'selected' : ''}' onClick=${() => {
+                                    this.setState({ canvas_mode: CanvasModes.pluck });
+                                    window.canvas_mode = CanvasModes.pluck;
+                                    stop_drawing();
+                                }}>
+                                                ${pick_svg} Pluck
+                                            </span>
+                                            <span class='choice ${canvas_mode == CanvasModes.draw ? 'selected' : ''}' onClick=${() => {
+                                    this.setState({ canvas_mode: CanvasModes.draw });
+                                    window.canvas_mode = CanvasModes.draw;
+                                    start_drawing();
+                                }}>
+                                                ✏️ Draw
+                                            </span>
+                                            <span class='choice ${canvas_mode == CanvasModes.erase ? 'selected' : ''}' onClick=${() => {
+                                    this.setState({ canvas_mode: CanvasModes.erase });
+                                    window.canvas_mode = CanvasModes.erase;
+                                    // start_drawing();
+                                }}>
+                                                🧽 Erase
+                                            </span>
+                                            <span class='choice ${canvas_mode == CanvasModes.move ? 'selected' : ''}' onClick=${() => {
+                                                this.setState({ canvas_mode: CanvasModes.move });
+                                                window.canvas_mode = CanvasModes.move;
+                                                // start_drawing();
+                                            }}>
+                                                ☛ Move
+                                            </span>
+                                        </div>
+
+                                        <div class='item toggle ${canvas_mode == CanvasModes.draw ? '' : 'inactive'}' onClick=${() => {
+                                        this.setState({ snap_to_note: !this.state.snap_to_note });
+                                        window.snap_to_note = !this.state.snap_to_note;
+                                        }}>
+                                            <span class='choice ${this.state.snap_to_note ? 'selected' : ''}'>Snap to note</span>
+                                            <span class='choice ${this.state.snap_to_note ? '' : 'selected'}'>Precise</span>
+                                        </div>
+                                    ` : html`
+                                    `}
+                                    <div class='gap'></div>
 
 
-                                <${DivCustomClick} class='item toggle ${show_main_menu ? '' : ''}' onClick=${() => {
-                                        this.setState({ show_main_menu: !show_main_menu });
-                                    }}>
-                                        ${show_main_menu ? `ⓧ` : `☰`}
-                                </${DivCustomClick}>
-
+                                    <${DivCustomClick} class='item toggle ${show_main_menu ? '' : ''}' onClick=${() => {
+                                            this.setState({ show_main_menu: !show_main_menu });
+                                        }}>
+                                            ${show_main_menu ? `ⓧ` : `☰`}
+                                    </${DivCustomClick}>
+                                </div>
                             </div>
 
                             ${show_main_menu ? html`
@@ -2005,16 +2091,17 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                     <h2>String presets</h2>
                                     <div id='presets'>
                                         <div class='presets-list'>
-                                            <div class='track-item' onClick=${() => {
-                                                resetAndAddStrings(canvas_jq, getSpiralingStrings(canvas_jq));
-                                            }}>
-                                                <div class='preset-name'>Spiral</div>
-                                            </div>
 
                                             <div class='track-item' onClick=${() => {
                                                 resetAndAddStrings(canvas_jq, get72strings(canvas_jq));
                                             }}>
                                                 <div class='preset-name'>72 strings</div>
+                                            </div>
+
+                                            <div class='track-item' onClick=${() => {
+                                                resetAndAddStrings(canvas_jq, getSpiralingStrings(canvas_jq));
+                                            }}>
+                                                <div class='preset-name'>Spiral harp</div>
                                             </div>
 
                                             <div class='track-item' onClick=${() => {
@@ -2026,53 +2113,29 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                             <div class='track-item' onClick=${() => {
                                                 resetAndAddStrings(canvas_jq, getChordStrings(canvas_jq));
                                             }}>
-                                                <div class='preset-name'>C, G, Am, F chords</div>
+                                                <div class='preset-name'>I–V–vi–IV Chords</div>
                                             </div>
+
 
                                             <div class='track-item' onClick=${() => {
                                                 resetAndAddStrings(canvas_jq, getCanonChordStrings(canvas_jq));
                                             }}>
-                                                <div class='preset-name'>Some other chords</div>
+                                                <div class='preset-name'>Canon Chords</div>
+                                            </div>
+
+                                            <div class='track-item' onClick=${() => {
+                                                resetAndAddStrings(canvas_jq, getAndalusianCadence(canvas_jq));
+                                            }}>
+                                                <div class='preset-name'>Andalusian Chords</div>
                                             </div>
 
                                             ${presets.map(preset => html`
-                                                <div class='track-item' onClick=${() => {
+                                                <div class='track-item user-preset' onClick=${() => {
                                                     resetAndAddStrings(canvas_jq, preset.strings);
                                                 }}>
                                                     <div class='preset-name'>${preset.name}</div>
                                                 </div>
                                             `)}
-                                        </div>
-
-                                        <div class='strings-menu'>
-                                            <div class='item' onClick=${() => {
-                                                const name = prompt('Save preset as');
-                                                // convert name to slug
-                                                const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '').replace(/^-/, '');
-                                                // save to localstorage
-                                                const preset_slugs = JSON.parse(localStorage.getItem('preset_slugs')) || [];
-                                                if (preset_slugs.includes(slug)) {
-                                                    const overwrite = confirm('Overwrite existing preset?');
-                                                    if (!overwrite) {
-                                                        return;
-                                                    }
-                                                }
-                                                preset_slugs.push(slug);
-                                                const screen = { width, height };
-                                                console.log('screen', screen);
-                                                localStorage.setItem('preset_slugs', JSON.stringify(preset_slugs));
-                                                localStorage.setItem('preset:' + slug, JSON.stringify({ name, slug, strings: pluckableStrings.map(s => { return { string_center: s.string_center, freq: s.freq, string_width: s.string_width, angle: s.angle, screen } }) }));
-
-                                                this.setState({ trigger_rerender: Date.now() });
-                                            }}>
-                                                💾 Save current strings
-                                            </div>
-                                            <div class='item' onClick=${() => {
-                                                resetAndAddStrings(canvas_jq, []);
-                                            }}>
-                                                🧹 Clear all strings
-                                            </div>
-                                            <div></div>
                                         </div>
                                     </div>
 
@@ -2084,22 +2147,37 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                             return html`
                                                 <div class='track-artist' style='background: ${color}'>
                                                     <h3>${folder}</h3>
-                                                    ${grouped_midis[folder].map(midi => html`
-                                                        <div>
-                                                        <div class='track-item' onClick=${async e => {
-                                                            const midi_file = midi;
-                                                            this.setState({ selected_midi: midi_file, show_main_menu: false });
+                                                    ${grouped_midis[folder].map(midi => {
+                                                        const track_name = midi.split('/').pop().replace(/\.mid$/, '');
+                                                        const featured_tracks = [
+                                                            'Gymnopedie No. 1',
+                                                            'Clair de Lune',
+                                                            'Hungarian Rhapsody No. 2',
+                                                            'La Campanella',
+                                                            'Fugue BWV 578',
+                                                            'Moonlight Sonata (3rd movement)',
+                                                            'Piano Sonata No. 13',
+                                                            'Suite No. 1, Morning Mood',
+                                                        ]
+                                                        const featured = featured_tracks.includes(track_name);
+                                                        return html`
+                                                            <div>
+                                                            <div class='track-item ${featured ? 'featured' : ''}' onClick=${async e => {
+                                                                const midi_file = midi;
+                                                                this.setState({ selected_midi: midi_file, show_main_menu: false });
 
-                                                            const midi_json = await set_remote_midi_track("./midis/" + midi_file);
-                                                            set_midi_track(midi_json);
-                                                            this.setState({ playing: true });
-                                                        }}>${midi.split('/').pop().replace(/\.mid$/, '')}</div>
-                                                        </div>
-                                                    `)}
+                                                                const midi_json = await set_remote_midi_track("./midis/" + midi_file);
+                                                                set_midi_track(midi_json);
+                                                                this.setState({ playing: true });
+                                                            }}>${track_name}</div>
+                                                            </div>
+                                                        `
+                                                    })}
                                                 </div>
                                             `
                                         })}
                                     </div>
+                                    <p>The tracks marked with ⭐️ are author's picks.</p>
                                 </div>
                             ` : html``}
                         `
