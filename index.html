@@ -250,6 +250,9 @@
             padding: 4px;
         }
 
+        #controls .item.toggle .infotoggle {
+            filter: brightness(0) invert(1);
+        }
         #controls .item.toggle .choice {
             background: none;
             color: #aaa;
@@ -1937,7 +1940,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                         
                                         this.setState({ show_info: !show_info });
                                     }}>
-                                        ${show_modes ? `ⓧ` : `❓`}
+                                        ${show_modes ? `ⓧ` : html`<span class='infotoggle'>❓</span>`}
                                 </${DivCustomClick}>
 
                                 ${show_info ? html`
@@ -2080,7 +2083,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                     <${DivCustomClick} class='item toggle ${show_main_menu ? '' : ''}' onClick=${() => {
                                             this.setState({ show_main_menu: !show_main_menu });
                                         }}>
-                                            ${show_main_menu ? `ⓧ` : `☰`}
+                                            ${show_main_menu ? `ⓧ` : `♫`}
                                     </${DivCustomClick}>
                                 </div>
                             </div>
