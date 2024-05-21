@@ -7,7 +7,7 @@
     <link rel="shortcut icon" href="#">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:site" content="@mayfer">
-    <meta name="twitter:title" content="string simulator">
+    <meta name="twitter:title" content="Pluck">
     <meta name="twitter:description"
         content="This is an interactive string simulator that uses basic Fourier math to generate audio & visuals according to where on the string you pluck from. The audio math is done on the GPU in WebGL">
     <meta name="twitter:image" content="https://i.imgur.com/DvnQIif.png">
@@ -815,8 +815,6 @@
                     const w = (width - 200) / columns;
                     const h = (height - 200) / rows;
 
-                    console.log(x, y, w, h);
-
                     for (var k = 0; k < chunksize; k++) {
                         const midi_number = midi_notes[note_i];
                         note_i++;
@@ -1350,13 +1348,13 @@
                 if (window.idle) {
                     return;
                 }
-                if (last_frame_time_ms && Date.now() - last_frame_time_ms > 3000) {
-                    note_last_frame_ms = last_frame_time_ms;
-                    if(window.midi_paused == false) {
-                        window.midi_paused = true
-                        console.log('pausing due to inactivity?')
-                    }
-                }
+                // if (last_frame_time_ms && Date.now() - last_frame_time_ms > 3000) {
+                //     note_last_frame_ms = last_frame_time_ms;
+                //     if(window.midi_paused == false) {
+                //         window.midi_paused = true
+                //         console.log('pausing due to inactivity?')
+                //     }
+                // }
 
                 let one_sec_ms = 1000;
 
@@ -1844,6 +1842,12 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                             window.midi_paused = true;
                             this.setState({ playing: false });
                         }
+                        if (document.visibilityState === 'visible') {
+                            window.midi_paused = true;
+                            this.setState({ playing: false });
+                            resetAndAddStrings(canvas_jq, pluckableStrings.map(s => { return { string_center: s.string_center, string_width: s.string_width, angle: s.angle, freq: s.freq, screen: { width, height } } }));
+                        }
+
                     })
                     window.addEventListener('blur', () => {
                         exitDrawingIfDrawMode();
@@ -1922,7 +1926,7 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                                 window.midi_paused = true;
                                             }
                                         }}>
-                                            ${this.state.playing ? "⏹ Stop" : "▶️ Play"}
+                                            ${this.state.playing ? "▧ Stop" : "▶️ Play"}
                                         </div>
                                     </div>
                                 ` : html``}
@@ -2172,6 +2176,8 @@ Created by potrace 1.15, written by Peter Selinger 2001-2017
                                                             'Moonlight Sonata (3rd movement)',
                                                             'Piano Sonata No. 13',
                                                             'Suite No. 1, Morning Mood',
+                                                            'Christmastime is Here',
+                                                            'Polonaise Op. 53',
                                                         ]
                                                         const featured = featured_tracks.includes(track_name);
                                                         return html`
